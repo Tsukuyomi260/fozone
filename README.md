@@ -2,7 +2,7 @@
 
 Plateforme complète pour la vente automatisée de tickets Wi-Fi avec paiements Mobile Money via Moneroo.
 
-## 🎯 Vue d'ensemble
+## Vue d'ensemble
 
 Cette plateforme permet de :
 - Gérer plusieurs zones Wi-Fi
@@ -11,7 +11,7 @@ Cette plateforme permet de :
 - Suivre les statistiques et la comptabilité
 - Importer des tickets depuis des fichiers CSV
 
-## 🏗️ Architecture
+## Architecture
 
 ### Backend
 - **Node.js** avec Express
@@ -25,14 +25,14 @@ Cette plateforme permet de :
 - **React Router** pour la navigation
 - Dark mode automatique
 
-## 📋 Prérequis
+## Prérequis
 
 - Node.js 18+
 - Compte Supabase
 - Clés API Moneroo
 - npm ou yarn
 
-## 🚀 Installation
+## Installation
 
 ### 1. Backend
 
@@ -61,14 +61,14 @@ Le frontend démarre sur `http://localhost:5173`
 
 Exécuter le script SQL dans `backend/database/schema.sql` dans votre projet Supabase (SQL Editor).
 
-## 📚 Documentation
+## Documentation
 
 - [Backend README](backend/README.md)
 - [Frontend README](frontend/README.md)
 - [Architecture Backend](backend/ARCHITECTURE.md)
 - [Guide de configuration](backend/SETUP.md)
 
-## 🔧 Configuration
+## Configuration
 
 ### Variables d'environnement Backend
 
@@ -82,7 +82,7 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_API_URL=http://localhost:3000/api
 ```
 
-## 📱 Fonctionnalités
+## Fonctionnalités
 
 ### Dashboard Admin
 - Vue d'ensemble des statistiques
@@ -113,7 +113,7 @@ VITE_API_URL=http://localhost:3000/api
 - Webhooks sécurisés
 - Idempotence
 
-## 🔒 Sécurité
+## Sécurité
 
 - Authentification JWT
 - Validation des entrées
@@ -125,7 +125,7 @@ VITE_API_URL=http://localhost:3000/api
 
 ISC
 
-## 👥 Support
+## Support
 
 Pour toute question, contactez l'équipe de développement.
 
