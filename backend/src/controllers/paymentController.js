@@ -15,7 +15,7 @@ const logger = require('../config/logger');
  */
 async function createPaymentIntent(req, res, next) {
   try {
-    const { wifi_zone_id, amount, pricing_id, customer } = req.body;
+    const { wifi_zone_id, pricing_id, customer } = req.body;
 
     // Vérifier que la zone Wi-Fi existe
     const { data: zone, error: zoneError } = await supabaseAdmin
@@ -30,30 +30,23 @@ async function createPaymentIntent(req, res, next) {
       });
     }
 
-    // Vérifier que le tarif existe et correspond à la zone, ou utiliser amount
-    let finalAmount;
-    if (pricing_id) {
-      const { data: pricing } = await supabaseAdmin
-        .from('pricings')
-        .select('id, amount, description')
-        .eq('id', pricing_id)
-        .eq('wifi_zone_id', wifi_zone_id)
-        .eq('is_active', true)
-        .single();
+    // Le montant est toujours lu en base a partir du tarif: il n'est jamais
+    // accepte depuis la requete, sinon le client fixerait son propre prix.
+    const { data: pricing } = await supabaseAdmin
+      .from('pricings')
+      .select('id, amount, description')
+      .eq('id', pricing_id)
+      .eq('wifi_zone_id', wifi_zone_id)
+      .eq('is_active', true)
+      .single();
 
-      if (!pricing) {
-        return res.status(400).json({
-          error: 'Invalid pricing for this zone'
-        });
-      }
-      finalAmount = parseFloat(pricing.amount);
-    } else if (amount) {
-      finalAmount = parseFloat(amount);
-    } else {
+    if (!pricing) {
       return res.status(400).json({
-        error: 'Either amount or pricing_id must be provided'
+        error: 'Invalid pricing for this zone'
       });
     }
+
+    const finalAmount = parseFloat(pricing.amount);
 
     // Construire l'URL de retour (où le client sera redirigé après paiement)
     // Moneroo ajoutera paymentId et paymentStatus dans les query params
@@ -133,9 +126,12 @@ async function handleMonerooWebhook(req, res, next) {
   try {
     const signature = req.headers['x-moneroo-signature'];
     
-    // Le payload doit être la chaîne JSON brute pour la vérification
-    // JSON.stringify préserve l'ordre des clés dans les objets JavaScript modernes
-    const rawBody = JSON.stringify(req.body);
+    // La signature porte sur les octets exactement tels que Moneroo les a envoyes.
+    // Re-serialiser req.body avec JSON.stringify produirait une chaine differente
+    // des que l'espacement, l'ordre des cles ou l'echappement unicode diffère.
+    const rawBody = req.rawBody
+      ? req.rawBody.toString('utf8')
+      : JSON.stringify(req.body);
     
     // Vérifier la signature du webhook (HMAC-SHA256 du payload stringifié)
     if (!verifyWebhookSignature(rawBody, signature)) {
@@ -196,12 +192,26 @@ async function handleMonerooWebhook(req, res, next) {
       });
     }
 
-    // Si le paiement est déjà confirmé, ne rien faire
+    // Un paiement deja marque 'completed' n'est reellement termine que si un
+    // ticket a ete attribue. Un echec d'attribution lors d'un webhook precedent
+    // laisse un paiement encaisse sans ticket: il faut alors reessayer, sinon le
+    // rejeu de Moneroo refermerait le probleme sans jamais livrer le client.
     if (payment.status === 'completed') {
-      await saveIdempotency(idempotencyKey, payment.id);
-      return res.status(200).json({
-        message: 'Payment already completed'
-      });
+      const { data: existingTickets } = await supabaseAdmin
+        .from('tickets')
+        .select('id')
+        .eq('payment_id', payment.id);
+
+      if (existingTickets && existingTickets.length > 0) {
+        await saveIdempotency(idempotencyKey, payment.id);
+        return res.status(200).json({
+          message: 'Payment already completed'
+        });
+      }
+
+      logger.warn(
+        'Payment ' + payment.id + ' is completed but has no ticket: retrying assignment'
+      );
     }
 
     // Traiter selon le type d'événement Moneroo
@@ -229,9 +239,14 @@ async function handleMonerooWebhook(req, res, next) {
       );
 
       if (!ticketAssignment.success) {
-        logger.error('Failed to assign ticket:', ticketAssignment.error);
-        // Le paiement est confirmé mais pas de ticket disponible
-        // On pourrait créer un ticket en attente ou notifier l'admin
+        // Le paiement est encaisse mais aucun ticket n'a pu etre attribue.
+        // On ne marque PAS l'idempotence: le 500 pousse Moneroo a rejouer le
+        // webhook, et le rejeu retentera l'attribution (voir plus haut).
+        logger.error(
+          'PAYMENT WITHOUT TICKET - action requise: paiement ' + payment.id +
+          ' encaisse pour la zone ' + payment.wifi_zone_id +
+          ' mais aucun ticket libre. Cause: ' + ticketAssignment.error
+        );
         return res.status(500).json({
           error: 'Payment confirmed but ticket assignment failed',
           details: ticketAssignment.error

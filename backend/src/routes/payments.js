@@ -10,22 +10,16 @@ const { authenticateToken } = require('../middleware/auth');
 const validate = require('../middleware/validator');
 
 // Validation pour la création de paiement (route publique)
+// pricing_id est obligatoire: le montant est lu en base a partir du tarif.
+// Accepter un montant fourni par le client laisserait choisir son propre prix.
 const paymentIntentValidation = [
   body('wifi_zone_id').isUUID(),
-  body('amount').optional().isFloat({ min: 0 }),
-  body('pricing_id').optional().isUUID(),
+  body('pricing_id').isUUID(),
   body('customer').isObject(),
   body('customer.phone').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 8, max: 20 }),
   body('customer.email').optional().isEmail(),
   body('customer.first_name').optional().trim(),
-  body('customer.last_name').optional().trim(),
-  body().custom((value) => {
-    // Soit amount, soit pricing_id doit être fourni
-    if (!value.amount && !value.pricing_id) {
-      throw new Error('Either amount or pricing_id must be provided');
-    }
-    return true;
-  })
+  body('customer.last_name').optional().trim()
 ];
 
 const paymentIdValidation = [

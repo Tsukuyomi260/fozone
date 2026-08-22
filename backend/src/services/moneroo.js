@@ -26,6 +26,10 @@ if (MONEROO_API_KEY) {
   logger.warn('⚠️  MONEROO_API_KEY is not configured! Payments will fail.');
 }
 
+if (!MONEROO_WEBHOOK_SECRET) {
+  logger.warn('⚠️  MONEROO_WEBHOOK_SECRET is not configured! All webhooks will be rejected.');
+}
+
 /**
  * Crée une intention de paiement via Moneroo Standard Integration
  * @param {object} paymentData - Données du paiement
@@ -230,6 +234,19 @@ async function verifyPayment(paymentId) {
  */
 function verifyWebhookSignature(payload, signature) {
   try {
+    if (!MONEROO_WEBHOOK_SECRET) {
+      logger.error(
+        "MONEROO_WEBHOOK_SECRET is not configured: every Moneroo webhook will be rejected " +
+        "and no ticket will ever be delivered."
+      );
+      return false;
+    }
+
+    if (!signature || typeof signature !== "string") {
+      logger.warn("Webhook received without X-Moneroo-Signature header");
+      return false;
+    }
+
     // La signature est calculée avec HMAC-SHA256 du payload (string)
     // Le payload doit être la chaîne JSON brute, pas un objet
     const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
@@ -239,11 +256,16 @@ function verifyWebhookSignature(payload, signature) {
       .update(payloadString)
       .digest('hex');
 
-    // Comparaison sécurisée pour éviter les attaques par timing
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature)
-    );
+    // Comparaison sécurisée pour éviter les attaques par timing.
+    // timingSafeEqual exige deux buffers de meme longueur.
+    const received = Buffer.from(signature, "utf8");
+    const expected = Buffer.from(expectedSignature, "utf8");
+
+    if (received.length !== expected.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(received, expected);
   } catch (error) {
     logger.error('Error verifying webhook signature:', error);
     return false;
