@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, Wifi, Copy, RefreshCw, MessageCircle } from 'lucide-react';
-import { getPaymentStatus } from '../services/payments';
+import { getPaymentStatus, getPaymentByPhone } from '../services/payments';
 import toast from 'react-hot-toast';
 import Logo from '../components/Logo';
 
@@ -75,14 +75,24 @@ export default function PaymentReturn() {
     return payment?.moneroo_payment_id || payment?.id || 'N/A';
   };
 
-  const handleLookup = (e) => {
+  const handleLookup = async (e) => {
     e.preventDefault();
-    const ref = lookupRef.trim();
-    if (!ref) {
-      toast.error('Veuillez saisir votre référence de paiement');
+    const digits = lookupRef.replace(/\D/g, '');
+
+    if (digits.length < 8) {
+      toast.error('Veuillez saisir le numéro utilisé pour le paiement');
       return;
     }
-    setSearchParams({ paymentId: ref });
+
+    setChecking(true);
+    try {
+      const response = await getPaymentByPhone(digits);
+      setPayment(response.payment);
+    } catch (error) {
+      toast.error(error.message || 'Aucun ticket trouvé pour ce numéro');
+    } finally {
+      setChecking(false);
+    }
   };
 
   if (loading) {
@@ -94,7 +104,9 @@ export default function PaymentReturn() {
   }
 
   const credentials = formatCredentials();
-  const isSuccess = paymentStatus === 'success' && payment?.status === 'completed';
+  // Le statut enregistre en base fait foi. Le parametre d'URL vient de
+  // Moneroo et n'existe pas quand le client retrouve son ticket lui-meme.
+  const isSuccess = payment?.status === 'completed';
   const isPending = payment?.status === 'pending';
   const isFailed = paymentStatus === 'failed' || payment?.status === 'failed';
   const hasCredentials = credentials && credentials.username && credentials.password;
@@ -147,24 +159,26 @@ export default function PaymentReturn() {
                 </h1>
                 <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
                   {paymentId
-                    ? "Aucun paiement ne correspond à cette référence. Vérifiez la saisie."
-                    : "Saisissez la référence reçue au moment de votre paiement."}
+                    ? "Aucun paiement ne correspond à cette référence. Saisissez plutôt votre numéro."
+                    : "Saisissez le numéro de téléphone utilisé pour payer."}
                 </p>
                 <form onSubmit={handleLookup} className="space-y-4">
                   <input
-                    type="text"
+                    type="tel"
+                    inputMode="numeric"
                     value={lookupRef}
                     onChange={(e) => setLookupRef(e.target.value)}
-                    placeholder="py_xxxxxxxxxxxx"
+                    placeholder="97 00 00 00"
                     className="input w-full"
                     autoFocus
                   />
                   <button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-lg"
+                    disabled={checking}
+                    className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-lg disabled:opacity-50"
                   >
-                    <RefreshCw size={20} />
-                    Retrouver mon ticket
+                    <RefreshCw size={20} className={checking ? 'animate-spin' : ''} />
+                    {checking ? 'Recherche...' : 'Retrouver mon ticket'}
                   </button>
                 </form>
               </div>

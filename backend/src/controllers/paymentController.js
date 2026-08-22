@@ -349,6 +349,51 @@ async function handleMonerooWebhook(req, res, next) {
 }
 
 /**
+ * Retrouve le dernier ticket achete depuis un numero de telephone.
+ * Route publique: le client ne connait ni l'UUID interne ni l'identifiant
+ * Moneroo. La passerelle lui montre sa propre reference (FPID FedaPay), que
+ * nous ne stockons pas. Son numero est la seule cle qu'il possede.
+ */
+async function getPaymentsByPhone(req, res, next) {
+  try {
+    const digits = String(req.params.phone).replace(/\D/g, '');
+    const phone = digits.length === 8 ? `229${digits}` : digits;
+
+    const { data: payments, error } = await supabaseAdmin
+      .from('payments')
+      .select('*, wifi_zones(name, router_ip), pricings(duration_hours, name)')
+      .eq('phone', phone)
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      logger.error('Error looking up payments by phone:', error);
+      return res.status(500).json({ error: 'Failed to look up payment' });
+    }
+
+    if (!payments || payments.length === 0) {
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    const payment = payments[0];
+
+    // La relation va de tickets vers payments: le join imbrique n'est pas
+    // disponible dans ce sens, on charge les tickets separement.
+    const { data: tickets } = await supabaseAdmin
+      .from('tickets')
+      .select('username, password')
+      .eq('payment_id', payment.id);
+
+    payment.tickets = tickets || [];
+
+    res.json({ payment });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Récupère les informations d'un paiement (pour le client)
  * Le paymentId peut être soit un UUID interne, soit un ID Moneroo (py_xxx)
  * Si le paiement est en attente, on vérifie aussi avec Moneroo pour mettre à jour le statut
@@ -528,6 +573,7 @@ async function getPaymentsByZone(req, res, next) {
 }
 
 module.exports = {
+  getPaymentsByPhone,
   createPaymentIntent,
   handleMonerooWebhook,
   getPaymentStatus,

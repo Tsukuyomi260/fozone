@@ -44,6 +44,15 @@ router.post('/intent', paymentIntentValidation, validate, paymentController.crea
 // Route publique pour le webhook Moneroo (sécurisée par signature)
 router.post('/moneroo/webhook', paymentController.handleMonerooWebhook);
 
+// Recherche par numero de telephone. Doit precéder /:paymentId, sinon
+// 'lookup' serait interprete comme un identifiant de paiement.
+router.get(
+  '/lookup/:phone',
+  [param('phone').trim().isLength({ min: 8, max: 20 })],
+  validate,
+  paymentController.getPaymentsByPhone
+);
+
 // Route publique pour vérifier le statut d'un paiement (pour le client)
 router.get('/:paymentId', paymentIdValidation, validate, paymentController.getPaymentStatus);
 

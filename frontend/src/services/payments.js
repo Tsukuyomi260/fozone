@@ -46,6 +46,25 @@ export async function getPaymentStatus(paymentId) {
 }
 
 /**
+ * Retrouve le dernier ticket acheté depuis un numéro de téléphone (route publique)
+ */
+export async function getPaymentByPhone(phone) {
+  const response = await fetch(getApiUrl(`payments/lookup/${encodeURIComponent(phone)}`), {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Aucun ticket trouvé pour ce numéro');
+  }
+
+  return response.json();
+}
+
+/**
  * Récupère les paiements d'une zone Wi-Fi (admin)
  */
 export async function getPaymentsByZone(zoneId, params = {}) {
