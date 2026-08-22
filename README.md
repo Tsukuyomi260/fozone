@@ -55,7 +55,7 @@ npm install
 npm run dev
 ```
 
-Le frontend démarre sur `http://localhost:5173`
+Le frontend démarre sur `http://localhost:5174`
 
 ### 3. Base de données
 

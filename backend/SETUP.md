@@ -83,7 +83,7 @@ MONEROO_API_SECRET=votre_secret
 MONEROO_WEBHOOK_SECRET=votre_webhook_secret
 MONEROO_BASE_URL=https://api.moneroo.io
 
-CORS_ORIGIN=http://localhost:5173
+CORS_ORIGIN=http://localhost:5174
 LOG_LEVEL=info
 ```
 

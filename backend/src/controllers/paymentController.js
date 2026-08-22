@@ -57,7 +57,7 @@ async function createPaymentIntent(req, res, next) {
 
     // Construire l'URL de retour (où le client sera redirigé après paiement)
     // Moneroo ajoutera paymentId et paymentStatus dans les query params
-    const returnUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/return`;
+    const returnUrl = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/payment/return`;
 
     // Créer le paiement dans Moneroo avec le format requis
     const paymentResult = await createPayment({

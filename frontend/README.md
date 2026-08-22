@@ -37,7 +37,7 @@ VITE_API_URL=http://localhost:3000/api
 npm run dev
 ```
 
-L'application sera accessible sur `http://localhost:5173`
+L'application sera accessible sur `http://localhost:5174`
 
 ## 📁 Structure du projet
 

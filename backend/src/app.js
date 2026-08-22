@@ -19,8 +19,14 @@ const app = express();
 app.use(helmet());
 
 // CORS
+// CORS_ORIGIN accepte plusieurs origines separees par des virgules
+const allowedOrigins = (process.env.CORS_ORIGIN || '*')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: allowedOrigins.includes('*') ? '*' : allowedOrigins,
   credentials: true,
   optionsSuccessStatus: 200
 };

@@ -7,7 +7,7 @@
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 // URL de base du frontend (pour générer les liens publics)
-export const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173');
+export const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5174');
 
 // Fonction helper pour construire une URL complète vers une route frontend
 export const getFrontendUrl = (path = '') => {

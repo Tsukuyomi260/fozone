@@ -172,7 +172,7 @@ MONEROO_WEBHOOK_SECRET=xxx
 MONEROO_BASE_URL=https://api.moneroo.io
 
 # CORS
-CORS_ORIGIN=http://localhost:5173
+CORS_ORIGIN=http://localhost:5174
 ```
 
 ## 📝 Prochaines étapes
