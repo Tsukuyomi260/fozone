@@ -315,6 +315,9 @@ async function deletePricing(req, res, next) {
       });
     }
 
+    // Les paiements conservent une copie du tarif (pricing_name,
+    // pricing_duration_hours) et la cle etrangere est ON DELETE SET NULL:
+    // supprimer un tarif detache les paiements sans alterer la comptabilite.
     const { error } = await supabaseAdmin
       .from('pricings')
       .delete()
@@ -323,7 +326,8 @@ async function deletePricing(req, res, next) {
     if (error) {
       logger.error('Error deleting pricing:', error);
       return res.status(400).json({
-        error: 'Failed to delete pricing'
+        error: 'Failed to delete pricing',
+        details: error.message
       });
     }
 

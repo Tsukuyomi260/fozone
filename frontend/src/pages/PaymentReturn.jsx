@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, Wifi, Copy, RefreshCw, MessageCircle } from 'lucide-react';
 import { getPaymentStatus } from '../services/payments';
@@ -12,7 +12,7 @@ export default function PaymentReturn() {
   const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
-  const formRef = useRef(null);
+
 
   useEffect(() => {
     if (paymentId) {
@@ -91,8 +91,15 @@ export default function PaymentReturn() {
 
   // Récupérer la durée depuis le pricing
   // Le pricing peut être un objet ou un tableau selon Supabase
-  const pricing = payment?.pricings;
-  const pricingData = Array.isArray(pricing) ? pricing[0] : pricing;
+  // Le tarif fige sur le paiement fait foi: la ligne pricings peut avoir ete
+  // supprimee depuis la vente. Le join ne sert que de repli pour les anciens
+  // paiements crees avant la migration 007.
+  // Supabase renvoie le join comme objet ou comme tableau selon la relation
+  const joined = Array.isArray(payment?.pricings) ? payment.pricings[0] : payment?.pricings;
+  const pricingData = {
+    name: payment?.pricing_name || joined?.name,
+    duration_hours: payment?.pricing_duration_hours ?? joined?.duration_hours
+  };
   const duration = pricingData?.duration_hours ? formatDuration(pricingData.duration_hours) : null;
 
   // Récupérer le router_ip depuis la zone WiFi
@@ -266,48 +273,28 @@ export default function PaymentReturn() {
                     Connectez-vous directement en cliquant sur
                   </p>
                   
-                  {/* Formulaire caché pour la connexion automatique au WiFi */}
-                  {loginUrl && credentials && (
-                    <form
-                      ref={formRef}
-                      action={loginUrl}
-                      method="post"
-                      target="_blank"
-                      style={{ display: 'none' }}
-                    >
-                      <input type="hidden" name="username" value={credentials.username} />
-                      <input type="hidden" name="password" value={credentials.password} />
-                      <input type="hidden" name="dst" value="/" />
-                      <input type="hidden" name="popup" value="true" />
-                    </form>
-                  )}
-                  
+
                   <button
                     onClick={() => {
-                      if (loginUrl && formRef.current && credentials) {
-                        // Soumettre le formulaire pour se connecter automatiquement au WiFi
-                        try {
-                          formRef.current.submit();
-                          toast.success('Connexion au WiFi en cours...');
-                        } catch (error) {
-                          console.error('Erreur lors de la connexion:', error);
-                          // Fallback: ouvrir l'URL avec les paramètres
-                          const params = new URLSearchParams({
-                            username: credentials.username,
-                            password: credentials.password,
-                            dst: '/',
-                            popup: 'true'
-                          });
-                          window.open(`${loginUrl}?${params.toString()}`, '_blank');
-                          toast.success('Page de connexion ouverte...');
-                        }
-                      } else {
-                        // Fallback: copier les identifiants
-                        if (credentials) {
-                          const text = `Username: ${credentials.username}\nPassword: ${credentials.password}`;
-                          copyToClipboard(text);
-                          toast.success('Identifiants copiés ! Utilisez-les pour vous connecter au WiFi');
-                        }
+                      if (loginUrl && credentials) {
+                        // Navigation de premier niveau, et non soumission de formulaire:
+                        // poster depuis une page HTTPS vers le portail en HTTP declenche
+                        // l'avertissement de contenu mixte de Chrome. Une navigation n'est
+                        // pas concernee par cette regle.
+                        // dst ramene le client sur cette page une fois connecte, pour qu'il
+                        // retrouve ses identifiants.
+                        const params = new URLSearchParams({
+                          username: credentials.username,
+                          password: credentials.password,
+                          dst: window.location.href
+                        });
+                        toast.success('Connexion au WiFi en cours...');
+                        window.location.href = `${loginUrl}?${params.toString()}`;
+                      } else if (credentials) {
+                        // Pas de router_ip renseigne: le client se connecte a la main
+                        const text = `Username: ${credentials.username}\nPassword: ${credentials.password}`;
+                        copyToClipboard(text);
+                        toast.success('Identifiants copiés ! Utilisez-les pour vous connecter au WiFi');
                       }
                     }}
                     className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"

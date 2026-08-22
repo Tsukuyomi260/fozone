@@ -89,6 +89,10 @@ async function createPaymentIntent(req, res, next) {
         amount: finalAmount,
         phone: customer?.phone || 'N/A', // Valeur par défaut (sera NULL après migration 006)
         pricing_id: pricing_id || null,
+        // Copie du tarif au moment de la vente: la comptabilite ne doit pas
+        // dependre d'une ligne pricings que le gerant peut supprimer ensuite.
+        pricing_name: pricing.name,
+        pricing_duration_hours: pricing.duration_hours,
         status: 'pending',
         currency: 'XOF'
       })

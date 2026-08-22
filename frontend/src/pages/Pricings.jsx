@@ -59,11 +59,13 @@ export default function Pricings() {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce tarif ?')) return;
 
     try {
-      await deletePricing(id);
-      toast.success('Tarif supprimé');
+      const response = await deletePricing(id);
+      // Un tarif deja vendu est desactive et non supprime: on remonte le message
+      // du serveur pour que l'utilisateur comprenne ce qui s'est passe.
+      toast.success(response?.message || 'Tarif supprimé');
       loadPricings(selectedZone);
     } catch (error) {
-      toast.error('Erreur lors de la suppression');
+      toast.error(error.message || 'Erreur lors de la suppression');
     }
   };
 
