@@ -79,24 +79,29 @@ export default function Pricings() {
     );
   }
 
+  const card =
+    'rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30';
+
+  const primaryBtn =
+    'inline-flex items-center justify-center gap-2 h-11 px-5 text-sm font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] rounded-xl shadow-lg shadow-lime-400/25 transition-colors';
+
   return (
-    <div className="space-y-6 md:space-y-8 w-full">
+    <div className="space-y-5 md:space-y-6 w-full">
       {/* En-tête */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight mb-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
             Tarifs
           </h1>
-          <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 font-medium">
-            Gérez les tarifs de vos zones Wi-Fi
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {!selectedZone
+              ? 'Choisissez une zone pour voir ses tarifs'
+              : `${pricings.length} tarif${pricings.length > 1 ? 's' : ''} sur cette zone`}
           </p>
         </div>
-        {selectedZone && (
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="inline-flex items-center justify-center gap-2 h-11 px-6 font-semibold bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 transition-all duration-200 hover:scale-105"
-          >
-            <Plus size={20} strokeWidth={2.5} />
+        {selectedZone && !showCreateForm && (
+          <button onClick={() => setShowCreateForm(true)} className={primaryBtn}>
+            <Plus size={18} strokeWidth={2.5} />
             Nouveau tarif
           </button>
         )}
@@ -104,41 +109,39 @@ export default function Pricings() {
 
       {/* Sélection de zone */}
       {zones.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-8 text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-2xl mb-4">
-            <Wifi className="text-green-600 dark:text-green-400" size={40} strokeWidth={2} />
+        <div className={`${card} py-16 px-6 text-center`}>
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-lime-50 dark:bg-lime-400/10 mb-4">
+            <Wifi className="text-lime-600 dark:text-lime-400" size={26} strokeWidth={2} />
           </div>
-          <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Aucune zone Wi-Fi</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Créez d'abord une zone Wi-Fi pour ajouter des tarifs</p>
-          <Link to="/zones" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Aucune zone Wi-Fi</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">Créez d'abord une zone pour y ajouter des tarifs</p>
+          <Link to="/zones" className={primaryBtn}>
             <Plus size={18} strokeWidth={2.5} />
             Créer une zone
           </Link>
         </div>
       ) : (
         <>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-4 md:p-6">
-            <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              <div className="p-1.5 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-lg">
-                <Wifi size={18} strokeWidth={2} className="text-green-600 dark:text-green-400" />
-              </div>
-              <span>Zone WiFi</span>
+          <div className={`${card} p-4 flex flex-wrap items-center gap-3`}>
+            <div className="w-9 h-9 rounded-xl bg-lime-50 dark:bg-lime-400/10 flex items-center justify-center flex-shrink-0">
+              <Wifi size={17} strokeWidth={2.5} className="text-lime-600 dark:text-lime-400" />
+            </div>
+            <label htmlFor="zone-select" className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-600">
+              Zone
             </label>
             <select
+              id="zone-select"
               value={selectedZone}
               onChange={(e) => setSelectedZone(e.target.value)}
-              className="input w-full max-w-md"
+              className="flex-1 min-w-[200px] max-w-md h-10 px-3 rounded-xl text-sm bg-gray-100 dark:bg-white/[0.04] border border-transparent dark:border-white/[0.06] text-gray-900 dark:text-white outline-none focus:border-lime-400/50 transition-colors"
             >
-              <option value="">Sélectionnez la zone WiFi concernée</option>
+              <option value="">Sélectionnez une zone Wi-Fi</option>
               {zones.map((zone) => (
                 <option key={zone.id} value={zone.id}>
                   {zone.name}
                 </option>
               ))}
             </select>
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Choisissez la zone WiFi à laquelle ce tarif sera associé
-            </p>
           </div>
 
           {/* Formulaire de création */}
@@ -163,16 +166,13 @@ export default function Pricings() {
           {!showCreateForm && selectedZone && (
             <>
               {pricings.length === 0 ? (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-8 md:p-12 text-center">
-                  <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-2xl mb-4">
-                    <Tag className="text-green-600 dark:text-green-400" size={40} strokeWidth={2} />
+                <div className={`${card} py-16 px-6 text-center`}>
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-lime-50 dark:bg-lime-400/10 mb-4">
+                    <Tag className="text-lime-600 dark:text-lime-400" size={26} strokeWidth={2} />
                   </div>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Aucun tarif</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Créez votre premier tarif pour cette zone</p>
-                  <button
-                    onClick={() => setShowCreateForm(true)}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
-                  >
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Aucun tarif</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">Créez votre premier tarif pour cette zone</p>
+                  <button onClick={() => setShowCreateForm(true)} className={primaryBtn}>
                     <Plus size={18} strokeWidth={2.5} />
                     Créer un tarif
                   </button>
@@ -182,46 +182,47 @@ export default function Pricings() {
                   {pricings.map((pricing) => (
                     <div
                       key={pricing.id}
-                      className="group bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-5 md:p-6 hover:shadow-xl hover:border-green-300 dark:hover:border-green-700 hover:scale-[1.02] transition-all duration-200"
+                      className={`${card} p-5 flex flex-col transition-colors hover:border-lime-400/40 dark:hover:border-lime-400/30`}
                     >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+                      <div className="flex items-start justify-between gap-2 mb-4">
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 truncate">
                             {pricing.name || 'Sans nom'}
                           </h3>
-                          <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                            {parseFloat(pricing.amount).toLocaleString()} FCFA
+                          <p className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight mt-1.5 leading-none">
+                            {parseFloat(pricing.amount).toLocaleString()}
+                            <span className="text-sm font-bold text-gray-400 dark:text-gray-500 ml-1.5">FCFA</span>
                           </p>
                         </div>
-                        <div className="flex space-x-1.5 ml-2">
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
                           <button
                             onClick={() => {
                               setEditingPricing(pricing);
                               setShowCreateForm(true);
                             }}
-                            className="p-2 text-gray-500 hover:text-green-600 dark:hover:text-green-400 rounded-xl hover:bg-green-50 dark:hover:bg-green-900/20 transition-all"
+                            className="p-2 rounded-lg text-gray-400 dark:text-gray-600 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors"
                             title="Modifier"
                           >
-                            <Edit size={18} strokeWidth={2} />
+                            <Edit size={16} strokeWidth={2} />
                           </button>
                           <button
                             onClick={() => handleDelete(pricing.id)}
-                            className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                            className="p-2 rounded-lg text-gray-400 dark:text-gray-600 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                             title="Supprimer"
                           >
-                            <Trash2 size={18} strokeWidth={2} />
+                            <Trash2 size={16} strokeWidth={2} />
                           </button>
                         </div>
                       </div>
-                      <div className="space-y-2 text-sm">
+                      <div className="flex-1">
                         {pricing.duration_hours && (
-                          <p className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                            <Clock size={16} strokeWidth={2} />
-                            <span>{pricing.duration_hours}h</span>
-                          </p>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-lime-50 dark:bg-lime-400/10 text-lime-700 dark:text-lime-400">
+                            <Clock size={12} strokeWidth={2.5} />
+                            {pricing.duration_hours}h
+                          </span>
                         )}
                         {pricing.description && (
-                          <p className="text-gray-600 dark:text-gray-400 line-clamp-2">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-3">
                             {pricing.description}
                           </p>
                         )}
@@ -362,20 +363,20 @@ function CreatePricingForm({ zoneId, zoneName, onCancel, onSuccess, editingPrici
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-6 md:p-8">
+    <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 p-5 md:p-6">
       {/* En-tête */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-xl shadow-sm">
-            <Tag className="text-green-600 dark:text-green-400" size={20} strokeWidth={2.5} />
+          <div className="w-9 h-9 rounded-xl bg-lime-50 dark:bg-lime-400/10 flex items-center justify-center flex-shrink-0">
+            <Tag className="text-lime-600 dark:text-lime-400" size={20} strokeWidth={2.5} />
           </div>
-          <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">
             {editingPricing ? 'Modifier le tarif' : 'Créer un nouveau tarif'}
           </h2>
         </div>
         <Link
           to="/pricings"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 text-sm md:text-base"
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 text-sm font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] rounded-xl shadow-lg shadow-lime-400/25 transition-colors"
         >
           <Menu size={18} className="mr-2" />
           <span className="hidden sm:inline">Voir tous les tarifs</span>
@@ -384,10 +385,10 @@ function CreatePricingForm({ zoneId, zoneName, onCancel, onSuccess, editingPrici
       </div>
 
       {/* Notice importante */}
-      <div className="bg-gradient-to-r from-green-50 to-green-50/50 dark:from-green-900/20 dark:to-green-800/10 border border-green-200 dark:border-green-800 rounded-xl p-3 md:p-4 mb-6">
+      <div className="bg-lime-50 dark:bg-lime-400/[0.07] border border-lime-200 dark:border-lime-400/20 rounded-xl p-3 md:p-4 mb-6">
         <div className="flex items-start space-x-2 md:space-x-3">
-          <Info className="text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" size={18} />
-          <p className="text-xs md:text-sm text-green-800 dark:text-green-300">
+          <Info className="text-lime-600 dark:text-lime-400 flex-shrink-0 mt-0.5" size={18} />
+          <p className="text-xs md:text-sm text-lime-800 dark:text-lime-300">
             <strong>Conseil :</strong> Créez des tarifs attractifs et adaptés à votre clientèle. Une bonne structure tarifaire est essentielle pour maximiser vos ventes.
           </p>
         </div>
@@ -503,7 +504,7 @@ function CreatePricingForm({ zoneId, zoneName, onCancel, onSuccess, editingPrici
         </div>
 
         {/* Boutons d'action */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4 pt-4 md:pt-6 border-t border-green-100 dark:border-gray-700">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4 pt-4 md:pt-6 border-t border-gray-200 dark:border-white/10">
           <button
             type="button"
             onClick={onCancel}
@@ -515,11 +516,11 @@ function CreatePricingForm({ zoneId, zoneName, onCancel, onSuccess, editingPrici
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 flex items-center justify-center gap-2"
+            className="h-11 px-5 text-sm font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] rounded-xl shadow-lg shadow-lime-400/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 inline-flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span className="h-4 w-4 rounded-full border-2 border-[#0A1005]/30 border-t-[#0A1005] animate-spin" />
                 {editingPricing ? 'Modification...' : 'Création...'}
               </>
             ) : (
