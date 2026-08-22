@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="expires" content="-1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#080B0A" />
+    <title>Internet hotspot - Log in</title>
+    <style>
+        :root {
+            --bg: #080B0A;
+            --surface: #111815;
+            --field: #0D1310;
+            --line: rgba(255, 255, 255, 0.08);
+            --line-soft: rgba(255, 255, 255, 0.05);
+            --lime: #A3E635;
+            --lime-deep: #7CCF19;
+            --green: #22C55E;
+            --text: #E9F1EB;
+            --muted: #8B9A91;
+            --danger: #FF6B6B;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            color: var(--text);
+            position: relative;
+            overflow-x: hidden;
+            color-scheme: dark;
+        }
+
+        /* Halo vert diffus, comme la lueur du dashboard */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(80% 55% at 50% -10%, rgba(34, 197, 94, 0.28), transparent 70%),
+                radial-gradient(60% 40% at 100% 100%, rgba(163, 230, 53, 0.10), transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Trame discrète */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: radial-gradient(75% 60% at 50% 0%, #000 40%, transparent 100%);
+            -webkit-mask-image: radial-gradient(75% 60% at 50% 0%, #000 40%, transparent 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .ie-fixMinHeight {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .main {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+            position: relative;
+            z-index: 1;
+        }
+
+        .wrap {
+            background: linear-gradient(180deg, rgba(23, 32, 27, 0.92), rgba(13, 19, 16, 0.92));
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            padding: 26px 20px 22px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow:
+                0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                0 24px 60px rgba(0, 0, 0, 0.55);
+        }
+
+        .animated.fadeIn {
+            animation: slideUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ---- En-tête ---- */
+        h1 {
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+            text-align: center;
+            margin: 4px 0 8px;
+            line-height: 1.3;
+        }
+
+        .info {
+            text-align: center;
+            color: var(--muted);
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+        }
+
+        .info.alert {
+            background: rgba(255, 107, 107, 0.10);
+            border: 1px solid rgba(255, 107, 107, 0.32);
+            color: var(--danger);
+            padding: 11px 14px;
+            border-radius: 13px;
+            font-weight: 500;
+            text-align: left;
+        }
+
+        .info a {
+            color: var(--lime);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .info a:hover { text-decoration: underline; }
+
+        /* ---- Boutons d'action ---- */
+        .wifi-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 22px;
+        }
+
+        .wifi-button {
+            display: block;
+            padding: 14px 18px;
+            font-weight: 650;
+            font-size: 14.5px;
+            text-decoration: none;
+            border-radius: 14px;
+            text-align: center;
+            width: 100%;
+            letter-spacing: 0.1px;
+            transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+        }
+
+        .wifi-button-primary {
+            background: linear-gradient(180deg, var(--lime), var(--lime-deep));
+            color: #0A1005;
+            box-shadow: 0 8px 22px rgba(163, 230, 53, 0.24);
+        }
+
+        .wifi-button-secondary {
+            background: rgba(34, 197, 94, 0.09);
+            border: 1px solid rgba(34, 197, 94, 0.32);
+            color: #7DE8A5;
+        }
+
+        .wifi-button:active { transform: translateY(1px); }
+
+        @media (hover: hover) {
+            .wifi-button-primary:hover {
+                box-shadow: 0 12px 28px rgba(163, 230, 53, 0.34);
+            }
+            .wifi-button-secondary:hover {
+                background: rgba(34, 197, 94, 0.16);
+            }
+        }
+
+        /* ---- Séparateur ---- */
+        .sep {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 0 18px;
+            color: var(--muted);
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 1.1px;
+        }
+
+        .sep::before,
+        .sep::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--line-soft);
+        }
+
+        /* ---- Champs ---- */
+        label {
+            display: block;
+            position: relative;
+            margin-bottom: 11px;
+        }
+
+        label img.ico {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            /* Force l'icône en clair quelle que soit la couleur du SVG d'origine */
+            filter: brightness(0) invert(1);
+            opacity: 0.38;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 14px 15px 14px 44px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            font-size: 16px; /* 16px minimum: évite le zoom auto sur iOS */
+            background: var(--field);
+            color: var(--text);
+            font-family: inherit;
+            transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: rgba(163, 230, 53, 0.55);
+            background: #0F1712;
+            box-shadow: 0 0 0 3px rgba(163, 230, 53, 0.14);
+        }
+
+        input[type="text"]::placeholder,
+        input[type="password"]::placeholder {
+            color: #5F6E66;
+        }
+
+        input[type="submit"] {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(180deg, var(--lime), var(--lime-deep));
+            color: #0A1005;
+            border: none;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 750;
+            font-family: inherit;
+            cursor: pointer;
+            letter-spacing: 0.4px;
+            box-shadow: 0 10px 26px rgba(163, 230, 53, 0.26);
+            margin-top: 9px;
+            -webkit-appearance: none;
+            appearance: none;
+            transition: transform 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        input[type="submit"]:active { transform: translateY(1px); }
+
+        @media (hover: hover) {
+            input[type="submit"]:hover {
+                box-shadow: 0 14px 32px rgba(163, 230, 53, 0.36);
+            }
+        }
+
+        /* ---- Pied ---- */
+        .info.bt {
+            margin: 20px 0 0;
+            padding-top: 16px;
+            border-top: 1px solid var(--line-soft);
+            color: #6B7A72;
+            font-size: 11.5px;
+            letter-spacing: 0.2px;
+        }
+
+        /* ---- Écrans plus larges ---- */
+        @media (min-width: 480px) {
+            .main { padding: 40px 24px; }
+
+            .wrap {
+                padding: 34px 30px 28px;
+                border-radius: 26px;
+            }
+
+            h1 { font-size: 23px; }
+
+            .info { font-size: 14px; }
+            .wifi-button { padding: 15px 20px; font-size: 15px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .animated.fadeIn { animation: none; }
+            * { transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+    $(if chap-id)
+    <form name="sendin" action="$(link-login-only)" method="post" style="display:none">
+        <input type="hidden" name="username" />
+        <input type="hidden" name="password" />
+        <input type="hidden" name="dst" value="$(link-orig)" />
+        <input type="hidden" name="popup" value="true" />
+    </form>
+    <script src="/md5.js"></script>
+    <script>
+        function doLogin() {
+            document.sendin.username.value = document.login.username.value;
+            document.sendin.password.value = hexMD5('$(chap-id)' + document.login.password.value + '$(chap-challenge)');
+            document.sendin.submit();
+            return false;
+        }
+    </script>
+    $(endif)
+    <div class="ie-fixMinHeight">
+        <div class="main">
+            <div class="wrap animated fadeIn">
+                <form name="login" action="$(link-login-only)" method="post" $(if chap-id) onSubmit="return doLogin()" $(endif)>
+                    <input type="hidden" name="dst" value="$(link-orig)" />
+                    <input type="hidden" name="popup" value="true" />
+                    <h1>STARLINK FO Wifi-Zone</h1>
+                    <p class="info $(if error)alert$(endif)">
+                        $(if error == "")Entrez votre nom d'utilisateur et votre mot de passe pour vous connecter $(if trial == 'yes')<br />Essai gratuit disponible, <a href="$(link-login-only)?dst=$(link-orig-esc)&amp;username=T-$(mac-esc)">cliquez ici</a>.$(endif)
+                        $(endif)
+                        $(if error)$(error)$(endif)
+                    </p>
+                    <div class="wifi-container">
+                        <a href="https://fozone.org/buy/33074f8e-9ad1-48f3-a3f5-8413f00090d1" class="wifi-button wifi-button-primary">
+                            Acheter un ticket Wi-Fi
+                        </a>
+                        <a href="https://fozone.org/payment/return" class="wifi-button wifi-button-secondary">
+                            Récupérer mon ticket
+                        </a>
+                    </div>
+                    <div class="sep">ou connectez-vous</div>
+                    <label>
+                        <img class="ico" src="img/user.svg" alt="" />
+                        <input name="username" type="text" value="$(username)" placeholder="Nom d'utilisateur" />
+                    </label>
+                    <label>
+                        <img class="ico" src="img/password.svg" alt="" />
+                        <input name="password" type="password" placeholder="Mot de passe" />
+                    </label>
+                    <input type="submit" value="SE CONNECTER" />
+                </form>
+                <p class="info bt">Made with heart by STARFO Team</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
