@@ -1,195 +1,195 @@
-<!doctype html>
-<html lang="fr">
+    <!doctype html>
+    <html lang="fr">
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta http-equiv="refresh" content="2; url=$(link-redirect)">
-    <meta http-equiv="pragma" content="no-cache">
-    <meta http-equiv="expires" content="-1">
-    <meta name="theme-color" content="#080B0A" />
-    <title>Internet hotspot - Redirect</title>
-    <style>
-        :root {
-            --bg: #080B0A;
-            --line: rgba(255, 255, 255, 0.08);
-            --line-soft: rgba(255, 255, 255, 0.05);
-            --lime: #A3E635;
-            --lime-deep: #7CCF19;
-            --text: #E9F1EB;
-            --muted: #8B9A91;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            -webkit-text-size-adjust: 100%;
-        }
-
-        body {
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-            min-height: 100vh;
-            min-height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            background: var(--bg);
-            color: var(--text);
-            position: relative;
-            overflow-x: hidden;
-            color-scheme: dark;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background:
-                radial-gradient(80% 55% at 50% -10%, rgba(34, 197, 94, 0.28), transparent 70%),
-                radial-gradient(60% 40% at 100% 100%, rgba(163, 230, 53, 0.10), transparent 70%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        body::after {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background-image:
-                linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
-            background-size: 44px 44px;
-            mask-image: radial-gradient(75% 60% at 50% 0%, #000 40%, transparent 100%);
-            -webkit-mask-image: radial-gradient(75% 60% at 50% 0%, #000 40%, transparent 100%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .ie-fixMinHeight {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-        }
-
-        .main {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
-            position: relative;
-            z-index: 1;
-        }
-
-        .wrap {
-            background: linear-gradient(180deg, rgba(23, 32, 27, 0.92), rgba(13, 19, 16, 0.92));
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid var(--line);
-            border-radius: 22px;
-            padding: 30px 22px 26px;
-            max-width: 420px;
-            width: 100%;
-            text-align: center;
-            box-shadow:
-                0 1px 0 rgba(255, 255, 255, 0.05) inset,
-                0 24px 60px rgba(0, 0, 0, 0.55);
-            animation: slideUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(16px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        h1 {
-            font-size: 20px;
-            font-weight: 700;
-            letter-spacing: -0.2px;
-            line-height: 1.3;
-            margin-bottom: 8px;
-        }
-
-        .info {
-            color: var(--muted);
-            font-size: 13.5px;
-            line-height: 1.6;
-        }
-
-        .info a {
-            color: var(--lime);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .info a:hover { text-decoration: underline; }
-
-        /* Barre calée sur les 2 s du meta refresh: le délai devient lisible */
-        .bar {
-            height: 3px;
-            border-radius: 3px;
-            background: var(--line-soft);
-            overflow: hidden;
-            margin: 22px 0 0;
-        }
-
-        .bar span {
-            display: block;
-            height: 100%;
-            width: 100%;
-            border-radius: 3px;
-            background: linear-gradient(90deg, var(--lime-deep), var(--lime));
-            transform-origin: left center;
-            animation: fill 2s linear both;
-        }
-
-        @keyframes fill {
-            from { transform: scaleX(0); }
-            to   { transform: scaleX(1); }
-        }
-
-        @media (min-width: 480px) {
-            .main { padding: 40px 24px; }
-
-            .wrap {
-                padding: 38px 32px 30px;
-                border-radius: 26px;
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+        <meta http-equiv="refresh" content="2; url=$(link-redirect)">
+        <meta http-equiv="pragma" content="no-cache">
+        <meta http-equiv="expires" content="-1">
+        <meta name="theme-color" content="#080B0A" />
+        <title>Internet hotspot - Redirect</title>
+        <style>
+            :root {
+                --bg: #080B0A;
+                --line: rgba(255, 255, 255, 0.08);
+                --line-soft: rgba(255, 255, 255, 0.05);
+                --lime: #A3E635;
+                --lime-deep: #7CCF19;
+                --text: #E9F1EB;
+                --muted: #8B9A91;
             }
 
-            h1 { font-size: 23px; }
-            .info { font-size: 14px; }
-        }
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
 
-        @media (prefers-reduced-motion: reduce) {
-            .wrap { animation: none; }
-            .bar span { animation: none; }
-        }
-    </style>
-    <script>
-        function startClock() {
-            $(if popup == 'true')
-            open('$(link-status)', 'hotspot_status', 'toolbar=0,location=0,directories=0,status=0,menubars=0,resizable=1,width=290,height=200');
-        $(endif)
-        location.href = unescape('$(link-redirect-esc)');
-        }
+            html {
+                -webkit-text-size-adjust: 100%;
+            }
 
-    </script>
-</head>
+            body {
+                font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+                min-height: 100vh;
+                min-height: 100dvh;
+                display: flex;
+                flex-direction: column;
+                background: var(--bg);
+                color: var(--text);
+                position: relative;
+                overflow-x: hidden;
+                color-scheme: dark;
+            }
 
-<body onLoad="startClock()">
-    <div class="ie-fixMinHeight">
-        <div class="main">
-            <div class="wrap">
-                <h1>Vous êtes connecté</h1>
-                <p class="info">Redirection en cours. Si rien ne se passe, <a href="$(link-redirect)">cliquez ici</a>.</p>
-                <div class="bar"><span></span></div>
+            body::before {
+                content: '';
+                position: fixed;
+                inset: 0;
+                background:
+                    radial-gradient(80% 55% at 50% -10%, rgba(34, 197, 94, 0.28), transparent 70%),
+                    radial-gradient(60% 40% at 100% 100%, rgba(163, 230, 53, 0.10), transparent 70%);
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            body::after {
+                content: '';
+                position: fixed;
+                inset: 0;
+                background-image:
+                    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+                background-size: 44px 44px;
+                mask-image: radial-gradient(75% 60% at 50% 0%, #000 40%, transparent 100%);
+                -webkit-mask-image: radial-gradient(75% 60% at 50% 0%, #000 40%, transparent 100%);
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            .ie-fixMinHeight {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+            }
+
+            .main {
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+                position: relative;
+                z-index: 1;
+            }
+
+            .wrap {
+                background: linear-gradient(180deg, rgba(23, 32, 27, 0.92), rgba(13, 19, 16, 0.92));
+                backdrop-filter: blur(14px);
+                -webkit-backdrop-filter: blur(14px);
+                border: 1px solid var(--line);
+                border-radius: 22px;
+                padding: 30px 22px 26px;
+                max-width: 420px;
+                width: 100%;
+                text-align: center;
+                box-shadow:
+                    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                    0 24px 60px rgba(0, 0, 0, 0.55);
+                animation: slideUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+            }
+
+            @keyframes slideUp {
+                from { opacity: 0; transform: translateY(16px); }
+                to   { opacity: 1; transform: translateY(0); }
+            }
+
+            h1 {
+                font-size: 20px;
+                font-weight: 700;
+                letter-spacing: -0.2px;
+                line-height: 1.3;
+                margin-bottom: 8px;
+            }
+
+            .info {
+                color: var(--muted);
+                font-size: 13.5px;
+                line-height: 1.6;
+            }
+
+            .info a {
+                color: var(--lime);
+                text-decoration: none;
+                font-weight: 600;
+            }
+
+            .info a:hover { text-decoration: underline; }
+
+            /* Barre calée sur les 2 s du meta refresh: le délai devient lisible */
+            .bar {
+                height: 3px;
+                border-radius: 3px;
+                background: var(--line-soft);
+                overflow: hidden;
+                margin: 22px 0 0;
+            }
+
+            .bar span {
+                display: block;
+                height: 100%;
+                width: 100%;
+                border-radius: 3px;
+                background: linear-gradient(90deg, var(--lime-deep), var(--lime));
+                transform-origin: left center;
+                animation: fill 2s linear both;
+            }
+
+            @keyframes fill {
+                from { transform: scaleX(0); }
+                to   { transform: scaleX(1); }
+            }
+
+            @media (min-width: 480px) {
+                .main { padding: 40px 24px; }
+
+                .wrap {
+                    padding: 38px 32px 30px;
+                    border-radius: 26px;
+                }
+
+                h1 { font-size: 23px; }
+                .info { font-size: 14px; }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .wrap { animation: none; }
+                .bar span { animation: none; }
+            }
+        </style>
+        <script>
+            function startClock() {
+                $(if popup == 'true')
+                open('$(link-status)', 'hotspot_status', 'toolbar=0,location=0,directories=0,status=0,menubars=0,resizable=1,width=290,height=200');
+            $(endif)
+            location.href = unescape('$(link-redirect-esc)');
+            }
+
+        </script>
+    </head>
+
+    <body onLoad="startClock()">
+        <div class="ie-fixMinHeight">
+            <div class="main">
+                <div class="wrap">
+                    <h1>Vous êtes connecté</h1>
+                    <p class="info">Redirection en cours. Si rien ne se passe, <a href="$(link-redirect)">cliquez ici</a>.</p>
+                    <div class="bar"><span></span></div>
+                </div>
             </div>
         </div>
-    </div>
-</body>
+    </body>
 
-</html>
+    </html>

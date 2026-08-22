@@ -79,6 +79,8 @@ export default function Dashboard() {
   }
 
   const todayTickets = stats?.today_tickets_sold || 0;
+  // Le net est calcule par l API a partir du taux partage avec la comptabilite
+  const todayNet = stats?.today_revenue_net ?? stats?.today_revenue ?? 0;
   const activeZones = stats?.active_zones || 0;
   const totalZones = stats?.total_zones || 0;
 
@@ -99,9 +101,9 @@ export default function Dashboard() {
     },
     {
       title: 'Recettes du jour',
-      value: `${(stats?.today_revenue || 0).toLocaleString()}`,
+      value: `${todayNet.toLocaleString()}`,
       unit: 'XOF',
-      hint: `${todayTickets} ticket${todayTickets > 1 ? 's' : ''} aujourd'hui`,
+      hint: `Net · ${todayTickets} ticket${todayTickets > 1 ? 's' : ''} aujourd'hui`,
       icon: TrendingUp,
     },
   ];
@@ -257,8 +259,11 @@ export default function Dashboard() {
               Aujourd'hui
             </span>
             <p className="text-4xl font-extrabold text-[#0A1005] tracking-tight leading-none">
-              {(stats?.today_revenue || 0).toLocaleString()}
+              {todayNet.toLocaleString()}
               <span className="text-base font-bold ml-1.5">XOF</span>
+            </p>
+            <p className="text-[11px] font-semibold text-[#0A1005]/50 mt-1.5 uppercase tracking-wide">
+              Net, commission déduite
             </p>
             <p className="text-sm text-[#0A1005]/70 font-medium mt-3">
               {todayTickets === 0

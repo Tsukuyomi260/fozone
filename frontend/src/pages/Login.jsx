@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/auth';
 import toast from 'react-hot-toast';
-import { Wifi, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import Logo from '../components/Logo';
 
 export default function Login() {
@@ -28,43 +28,54 @@ export default function Login() {
     }
   };
 
+  const field =
+    'w-full h-12 pl-11 rounded-xl text-[15px] bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/15 focus:bg-white dark:focus:bg-white/[0.06] transition-colors';
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-green-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-12">
-      <div className="w-full max-w-md">
-        {/* Logo et titre */}
-        <div className="text-center mb-10">
-          <div className="flex items-center justify-center mb-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg shadow-green-500/20">
-              <Wifi className="text-white" size={36} strokeWidth={2.5} />
-            </div>
-          </div>
-          <div className="flex items-center justify-center mb-2">
-            <Logo size="xl" className="text-gray-900 dark:text-white" />
-          </div>
-          <p className="text-base text-gray-600 dark:text-gray-400 font-medium">
-            Connectez-vous à votre compte
+    <div className="relative min-h-screen flex items-center justify-center px-4 py-10 bg-gray-50 dark:bg-[#080B0A] overflow-hidden">
+      {/* Halo vert, comme sur le portail captif */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-70 dark:opacity-100"
+        style={{
+          background:
+            'radial-gradient(70% 45% at 50% -5%, rgba(163, 230, 53, 0.16), transparent 70%)',
+        }}
+      />
+
+      <div className="relative w-full max-w-[400px]">
+        {/* Marque */}
+        <div className="text-center mb-8">
+          <Logo size="xl" className="text-gray-900 dark:text-white" />
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
+            Connectez-vous à votre espace de gestion
           </p>
         </div>
 
         {/* Formulaire */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-green-100 dark:border-gray-700 p-8 md:p-10">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/40 p-6 sm:p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">
+              <label
+                htmlFor="email"
+                className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide"
+              >
                 Email
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" strokeWidth={2} />
-                </div>
+                <Mail
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 h-[18px] w-[18px] text-gray-400 dark:text-gray-600 pointer-events-none"
+                  strokeWidth={2}
+                />
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="input pl-12 h-12 text-base"
+                  autoComplete="email"
+                  className={field}
                   placeholder="votre@email.com"
                 />
               </div>
@@ -72,57 +83,81 @@ export default function Login() {
 
             {/* Mot de passe */}
             <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">
-                Mot de passe
-              </label>
+              <div className="flex items-baseline justify-between mb-2">
+                <label
+                  htmlFor="password"
+                  className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+                >
+                  Mot de passe
+                </label>
+                <Link
+                  to="#"
+                  className="text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-lime-600 dark:hover:text-lime-400 transition-colors"
+                >
+                  Oublié ?
+                </Link>
+              </div>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" strokeWidth={2} />
-                </div>
+                <Lock
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 h-[18px] w-[18px] text-gray-400 dark:text-gray-600 pointer-events-none"
+                  strokeWidth={2}
+                />
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="input pl-12 pr-12 h-12 text-base"
+                  autoComplete="current-password"
+                  className={`${field} pr-11`}
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-600 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  title={showPassword ? 'Masquer' : 'Afficher'}
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" strokeWidth={2} /> : <Eye className="h-5 w-5" strokeWidth={2} />}
+                  {showPassword ? (
+                    <EyeOff className="h-[18px] w-[18px]" strokeWidth={2} />
+                  ) : (
+                    <Eye className="h-[18px] w-[18px]" strokeWidth={2} />
+                  )}
                 </button>
               </div>
-            </div>
-
-            {/* Mot de passe oublié */}
-            <div className="flex items-center justify-end">
-              <Link to="#" className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition-colors">
-                Mot de passe oublié ?
-              </Link>
             </div>
 
             {/* Bouton de connexion */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-12 mt-1 inline-flex items-center justify-center gap-2 text-[15px] font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] rounded-xl shadow-lg shadow-lime-400/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Connexion...' : 'Se connecter'}
+              {loading ? (
+                <>
+                  <span className="h-4 w-4 rounded-full border-2 border-[#0A1005]/30 border-t-[#0A1005] animate-spin" />
+                  Connexion...
+                </>
+              ) : (
+                <>
+                  Se connecter
+                  <ArrowRight size={17} strokeWidth={2.5} />
+                </>
+              )}
             </button>
           </form>
-
-          {/* Lien d'inscription */}
-          <p className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
-            Vous n'avez pas encore de compte ?{' '}
-            <Link to="/register" className="font-semibold text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 underline transition-colors">
-              Créez-en un
-            </Link>
-          </p>
         </div>
+
+        {/* Lien d'inscription */}
+        <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          Pas encore de compte ?{' '}
+          <Link
+            to="/register"
+            className="font-semibold text-lime-700 dark:text-lime-400 hover:text-lime-600 dark:hover:text-lime-300 transition-colors"
+          >
+            Créez-en un
+          </Link>
+        </p>
       </div>
     </div>
   );

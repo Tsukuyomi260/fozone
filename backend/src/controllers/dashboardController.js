@@ -5,6 +5,7 @@
 
 const { supabaseAdmin } = require('../config/database');
 const logger = require('../config/logger');
+const { netAmount } = require('../config/commission');
 
 /**
  * Récupère les statistiques globales pour toutes les zones de l'utilisateur
@@ -30,6 +31,7 @@ async function getGlobalStats(req, res, next) {
           total_revenue: 0,
           total_tickets_sold: 0,
           today_revenue: 0,
+          today_revenue_net: 0,
           today_tickets_sold: 0,
           total_zones: 0,
           active_zones: 0
@@ -85,6 +87,8 @@ async function getGlobalStats(req, res, next) {
         total_revenue: total_revenue,
         total_tickets_sold: totalTicketsSold || 0,
         today_revenue: today_revenue,
+        // Ce que le gerant touche reellement, commission agregateur deduite
+        today_revenue_net: netAmount(today_revenue),
         today_tickets_sold: todayTicketsSold || 0,
         total_zones: zoneIds.length,
         active_zones: activeZoneIds.length

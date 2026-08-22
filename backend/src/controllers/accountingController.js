@@ -6,10 +6,8 @@
 const { supabaseAdmin } = require('../config/database');
 const logger = require('../config/logger');
 
-// Taux de commission de l'agregateur (FedaPay, mobile money Benin).
-// Le taux facture est de 1,8 %; on provisionne 2 % en attendant de
-// confirmer la regle d'arrondi sur un ticket a 950 F.
-const COMMISSION_RATE = 0.02;
+// Le taux est partage avec le dashboard: une seule source de verite
+const { COMMISSION_RATE, commissionOn } = require('../config/commission');
 
 /**
  * Récupère les statistiques de paiements par période (pour graphiques)
@@ -310,7 +308,7 @@ async function getPaymentHistory(req, res, next) {
     const paymentsWithCommission = payments?.map(payment => {
       const amount = parseFloat(payment.amount || 0);
       // Le XOF n'a pas de subdivision: l'agregateur facture en francs entiers.
-      const commission = Math.round(amount * COMMISSION_RATE);
+      const commission = commissionOn(amount);
       const revenue = amount - commission;
 
       return {
@@ -444,7 +442,7 @@ async function exportPaymentHistoryCSV(req, res, next) {
     const rows = payments?.map(payment => {
       const amount = parseFloat(payment.amount || 0);
       // Le XOF n'a pas de subdivision: l'agregateur facture en francs entiers.
-      const commission = Math.round(amount * COMMISSION_RATE);
+      const commission = commissionOn(amount);
       const revenue = amount - commission;
       const pricingAmount = payment.pricings?.amount || amount;
       const date = new Date(payment.completed_at).toLocaleString('fr-FR');
