@@ -316,7 +316,9 @@ async function getPaymentHistory(req, res, next) {
         commission: commission,
         revenue: revenue,
         pricing_amount: payment.pricings?.amount || amount,
-        pricing_name: payment.pricings?.name || null,
+        // Le tarif fige sur le paiement fait foi: sa ligne pricings a pu etre
+        // supprimee depuis la vente (voir migration 007).
+        pricing_name: payment.pricing_name || payment.pricings?.name || null,
         zone_name: payment.wifi_zones?.name || 'N/A',
         network: 'MTN MoMo Benin', // À récupérer depuis Moneroo si disponible
         ticket: ticketsMap[payment.id]?.[0] || null

@@ -10,6 +10,22 @@ const { checkIdempotency, saveIdempotency } = require('../utils/idempotency');
 const logger = require('../config/logger');
 
 /**
+ * Extrait le numero du payeur d'un objet paiement Moneroo.
+ * Le client saisit son numero sur la page de paiement, pas dans notre app:
+ * c'est donc Moneroo qui le detient. Le webhook ne porte pas toujours le
+ * champ, et son emplacement varie selon la passerelle, d'ou les alternatives.
+ */
+function extractPayerPhone(data) {
+  return (
+    data?.customer?.phone ||
+    data?.payment_phone_number ||
+    data?.capture?.phone_number ||
+    data?.capture?.gateway?.phone_number ||
+    null
+  );
+}
+
+/**
  * Crée une intention de paiement pour un client
  * Route publique (pas d'auth requise car appelée depuis le portail captif)
  */
@@ -221,13 +237,28 @@ async function handleMonerooWebhook(req, res, next) {
     // Traiter selon le type d'événement Moneroo
     // payment.success, payment.failed, payment.cancelled, payment.initiated
     if (event === 'payment.success' && status === 'success') {
+      // Le numero du payeur n'existe que chez Moneroo: on le recupere ici,
+      // sinon la comptabilite n'affiche que le 'N/A' pose a la creation.
+      let payerPhone = extractPayerPhone(webhookPayload.data);
+
+      if (!payerPhone) {
+        // Le webhook ne transporte pas le dossier complet: on interroge l'API.
+        const verified = await verifyPayment(paymentId);
+        if (verified.success) {
+          payerPhone = extractPayerPhone(verified.payment);
+        } else {
+          logger.warn(`Could not verify payment ${paymentId} to read payer phone: ${verified.error}`);
+        }
+      }
+
       // Mettre à jour le statut du paiement
       const { error: updateError } = await supabaseAdmin
         .from('payments')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
-          transaction_id: webhookPayload.data?.capture?.gateway?.transaction_id || null
+          transaction_id: webhookPayload.data?.capture?.gateway?.transaction_id || null,
+          ...(payerPhone ? { phone: payerPhone } : {})
         })
         .eq('id', payment.id);
 
