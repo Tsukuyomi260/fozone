@@ -6,8 +6,9 @@ import toast from 'react-hot-toast';
 import Logo from '../components/Logo';
 
 export default function PaymentReturn() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const paymentId = searchParams.get('paymentId');
+  const [lookupRef, setLookupRef] = useState('');
   const paymentStatus = searchParams.get('paymentStatus');
   const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -68,11 +69,20 @@ export default function PaymentReturn() {
   };
 
   const getPaymentReference = () => {
-    // Utiliser l'ID interne du paiement comme référence
-    if (payment?.id) {
-      return payment.id.substring(0, 15).toUpperCase();
+    // L'identifiant Moneroo est la seule reference que le client puisse
+    // ressaisir: la route de consultation n'accepte qu'un py_xxx ou un UUID
+    // complet. Un UUID tronque serait inutilisable pour retrouver le ticket.
+    return payment?.moneroo_payment_id || payment?.id || 'N/A';
+  };
+
+  const handleLookup = (e) => {
+    e.preventDefault();
+    const ref = lookupRef.trim();
+    if (!ref) {
+      toast.error('Veuillez saisir votre référence de paiement');
+      return;
     }
-    return payment?.moneroo_payment_id || 'N/A';
+    setSearchParams({ paymentId: ref });
   };
 
   if (loading) {
@@ -129,6 +139,37 @@ export default function PaymentReturn() {
           </div>
 
           <div className="p-6 md:p-8">
+            {/* Récupération d'un ticket: aucune référence, ou référence inconnue */}
+            {!payment && (
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white text-center mb-2">
+                  Récupérer mon ticket
+                </h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
+                  {paymentId
+                    ? "Aucun paiement ne correspond à cette référence. Vérifiez la saisie."
+                    : "Saisissez la référence reçue au moment de votre paiement."}
+                </p>
+                <form onSubmit={handleLookup} className="space-y-4">
+                  <input
+                    type="text"
+                    value={lookupRef}
+                    onChange={(e) => setLookupRef(e.target.value)}
+                    placeholder="py_xxxxxxxxxxxx"
+                    className="input w-full"
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-lg"
+                  >
+                    <RefreshCw size={20} />
+                    Retrouver mon ticket
+                  </button>
+                </form>
+              </div>
+            )}
+
             {/* Message de remerciement */}
             {isSuccess && (
               <div className="text-center mb-6">
