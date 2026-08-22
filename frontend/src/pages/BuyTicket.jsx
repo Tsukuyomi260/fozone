@@ -11,6 +11,7 @@ export default function BuyTicket() {
   const [zone, setZone] = useState(null);
   const [pricings, setPricings] = useState([]);
   const [selectedPricing, setSelectedPricing] = useState('');
+  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
 
@@ -54,11 +55,28 @@ export default function BuyTicket() {
     return `${parseFloat(pricing.amount).toLocaleString()} FCFA`;
   };
 
+  // Le numero part chez Moneroo et sert de reference client dans la
+  // comptabilite. On n'envoie que des chiffres: un numero beninois saisi
+  // a 8 chiffres recoit l'indicatif 229.
+  const normalizePhone = (value) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length === 8) return `229${digits}`;
+    return digits;
+  };
+
+  const normalizedPhone = normalizePhone(phone);
+  const phoneIsValid = normalizedPhone.length >= 8;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!selectedPricing) {
       toast.error('Veuillez sélectionner un tarif');
+      return;
+    }
+
+    if (!phoneIsValid) {
+      toast.error('Veuillez saisir un numéro de téléphone valide');
       return;
     }
 
@@ -72,6 +90,7 @@ export default function BuyTicket() {
           email: `client-${Date.now()}@wifi.local`,
           first_name: 'Client',
           last_name: 'WiFi',
+          phone: normalizedPhone,
         },
       });
 
@@ -154,10 +173,29 @@ export default function BuyTicket() {
               </select>
             </div>
 
+            {/* Numéro de téléphone */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Numéro de téléphone
+              </label>
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="97 00 00 00"
+                className="input w-full"
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Le numéro Mobile Money qui servira au paiement.
+              </p>
+            </div>
+
             {/* Bouton Acheter */}
             <button
               type="submit"
-              disabled={processing || !selectedPricing}
+              disabled={processing || !selectedPricing || !phoneIsValid}
               className="w-full flex items-center justify-center px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {processing ? (

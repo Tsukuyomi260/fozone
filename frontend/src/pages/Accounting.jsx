@@ -537,7 +537,7 @@ export default function Accounting() {
                         {payment.revenue ? `${parseFloat(payment.revenue).toFixed(2)} XOF` : 'N/A'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                        {payment.commission_rate ? `${payment.commission_rate.toFixed(0)} %` : 'N/A'}
+                        {payment.commission_rate ? `${parseFloat(payment.commission_rate.toFixed(1))} %` : 'N/A'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 font-mono text-xs">
                         {payment.moneroo_payment_id ? payment.moneroo_payment_id.substring(0, 20) + '...' : 'N/A'}

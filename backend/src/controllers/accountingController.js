@@ -6,8 +6,10 @@
 const { supabaseAdmin } = require('../config/database');
 const logger = require('../config/logger');
 
-// Taux de commission (15% par défaut)
-const COMMISSION_RATE = 0.15;
+// Taux de commission de l'agregateur (FedaPay, mobile money Benin).
+// Le taux facture est de 1,8 %; on provisionne 2 % en attendant de
+// confirmer la regle d'arrondi sur un ticket a 950 F.
+const COMMISSION_RATE = 0.02;
 
 /**
  * Récupère les statistiques de paiements par période (pour graphiques)
@@ -307,12 +309,13 @@ async function getPaymentHistory(req, res, next) {
     // Calculer les commissions et revenus
     const paymentsWithCommission = payments?.map(payment => {
       const amount = parseFloat(payment.amount || 0);
-      const commission = amount * COMMISSION_RATE;
+      // Le XOF n'a pas de subdivision: l'agregateur facture en francs entiers.
+      const commission = Math.round(amount * COMMISSION_RATE);
       const revenue = amount - commission;
 
       return {
         ...payment,
-        commission_rate: COMMISSION_RATE * 100, // 15%
+        commission_rate: COMMISSION_RATE * 100,
         commission: commission,
         revenue: revenue,
         pricing_amount: payment.pricings?.amount || amount,
@@ -440,7 +443,8 @@ async function exportPaymentHistoryCSV(req, res, next) {
 
     const rows = payments?.map(payment => {
       const amount = parseFloat(payment.amount || 0);
-      const commission = amount * COMMISSION_RATE;
+      // Le XOF n'a pas de subdivision: l'agregateur facture en francs entiers.
+      const commission = Math.round(amount * COMMISSION_RATE);
       const revenue = amount - commission;
       const pricingAmount = payment.pricings?.amount || amount;
       const date = new Date(payment.completed_at).toLocaleString('fr-FR');
@@ -449,7 +453,7 @@ async function exportPaymentHistoryCSV(req, res, next) {
         payment.wifi_zones?.name || 'N/A',
         `${pricingAmount} XOF`,
         `${revenue.toFixed(2)} XOF`,
-        `${(COMMISSION_RATE * 100).toFixed(0)} %`,
+        `${parseFloat((COMMISSION_RATE * 100).toFixed(1))} %`,
         payment.moneroo_payment_id || 'N/A',
         date,
         'MTN MoMo Benin',
