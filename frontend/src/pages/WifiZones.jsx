@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getWifiZones, deleteWifiZone } from '../services/wifiZones';
 import toast from 'react-hot-toast';
-import { Plus, MapPin, Trash2, Edit, Wifi } from 'lucide-react';
+import { Plus, MapPin, Trash2, Edit, Wifi, Phone, ArrowUpRight, Server } from 'lucide-react';
 import CreateWifiZone from './CreateWifiZone';
 
 export default function WifiZones() {
@@ -37,119 +37,161 @@ export default function WifiZones() {
     }
   };
 
+  const formatDate = (value) => {
+    if (!value) return null;
+    return new Date(value).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
   if (loading) {
-    return <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
-    </div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-lime-400/25 border-t-lime-400"></div>
+      </div>
+    );
   }
 
+  const card =
+    'rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30';
+
+  const primaryBtn =
+    'inline-flex items-center justify-center gap-2 h-11 px-5 text-sm font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] rounded-xl shadow-lg shadow-lime-400/25 transition-colors';
+
   return (
-    <div className="space-y-6 md:space-y-8 w-full">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-5 md:space-y-6 w-full">
+      {/* En-tête */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight mb-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
             Zones Wi-Fi
           </h1>
-          <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 font-medium">
-            Gérez vos zones Wi-Fi
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {zones.length === 0
+              ? 'Aucun point d\'accès configuré'
+              : `${zones.length} point${zones.length > 1 ? 's' : ''} d'accès`}
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="inline-flex items-center justify-center gap-2 h-11 px-6 font-semibold bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 transition-all duration-200 hover:scale-105"
-        >
-          <Plus size={20} strokeWidth={2.5} />
-          Nouvelle zone
-        </button>
+        {!showCreateForm && (
+          <button onClick={() => setShowCreateForm(true)} className={primaryBtn}>
+            <Plus size={18} strokeWidth={2.5} />
+            Nouvelle zone
+          </button>
+        )}
       </div>
 
       {/* Formulaire de création */}
       {showCreateForm && (
-        <CreateWifiZone onCancel={() => setShowCreateForm(false)} onSuccess={() => {
-          setShowCreateForm(false);
-          loadZones();
-        }} />
+        <CreateWifiZone
+          onCancel={() => setShowCreateForm(false)}
+          onSuccess={() => {
+            setShowCreateForm(false);
+            loadZones();
+          }}
+        />
       )}
 
       {/* Liste des zones */}
       {!showCreateForm && (
         <>
           {zones.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 text-center py-12 md:py-16">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-2xl mb-6">
-                <MapPin className="text-green-600 dark:text-green-400" size={40} strokeWidth={2} />
+            <div className={`${card} text-center py-16 px-6`}>
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-lime-50 dark:bg-lime-400/10 mb-4">
+                <MapPin className="text-lime-600 dark:text-lime-400" size={26} strokeWidth={2} />
               </div>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Aucune zone Wi-Fi</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Commencez par créer votre première zone</p>
-              <button 
-                onClick={() => setShowCreateForm(true)} 
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
-              >
+              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                Aucune zone Wi-Fi
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
+                Commencez par créer votre première zone
+              </p>
+              <button onClick={() => setShowCreateForm(true)} className={primaryBtn}>
                 <Plus size={18} strokeWidth={2.5} />
                 Créer votre première zone
               </button>
             </div>
           ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-          {zones.map((zone) => (
-            <div key={zone.id} className="group bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-6 hover:shadow-xl hover:border-green-300 dark:hover:border-green-700 hover:scale-[1.02] transition-all duration-200">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <div className="p-2.5 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-xl group-hover:from-green-200 group-hover:to-green-100 dark:group-hover:from-green-900/40 dark:group-hover:to-green-800/30 transition-all shadow-sm flex-shrink-0">
-                    <Wifi className="text-green-600 dark:text-green-400" size={20} strokeWidth={2.5} />
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {zones.map((zone) => (
+                <div
+                  key={zone.id}
+                  className={`${card} p-5 flex flex-col transition-colors hover:border-lime-400/40 dark:hover:border-lime-400/30`}
+                >
+                  {/* Titre + actions */}
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-10 h-10 flex-shrink-0 rounded-xl bg-lime-50 dark:bg-lime-400/10 flex items-center justify-center">
+                        <Wifi className="text-lime-600 dark:text-lime-400" size={19} strokeWidth={2.5} />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white truncate leading-tight">
+                          {zone.name}
+                        </h3>
+                        {zone.created_at && (
+                          <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-1">
+                            Créée le {formatDate(zone.created_at)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                      <Link
+                        to={`/zones/${zone.id}`}
+                        className="p-2 rounded-lg text-gray-400 dark:text-gray-600 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors"
+                        title="Modifier"
+                      >
+                        <Edit size={16} strokeWidth={2} />
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(zone.id)}
+                        className="p-2 rounded-lg text-gray-400 dark:text-gray-600 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 size={16} strokeWidth={2} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 truncate">
-                      {zone.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                      {zone.router_ip}
-                    </p>
+
+                  {/* Détails */}
+                  <div className="space-y-2 mb-5 flex-1">
+                    <div className="flex items-center gap-2.5 text-xs">
+                      <Server size={13} className="text-gray-400 dark:text-gray-600 flex-shrink-0" strokeWidth={2} />
+                      <span className="text-gray-600 dark:text-gray-400 truncate font-mono">
+                        {zone.router_ip}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-xs">
+                      <Phone size={13} className="text-gray-400 dark:text-gray-600 flex-shrink-0" strokeWidth={2} />
+                      <span className="text-gray-600 dark:text-gray-400 truncate">
+                        {zone.manager_phone}
+                      </span>
+                    </div>
+                    {zone.address && (
+                      <div className="flex items-start gap-2.5 text-xs">
+                        <MapPin size={13} className="text-gray-400 dark:text-gray-600 flex-shrink-0 mt-0.5" strokeWidth={2} />
+                        <span className="text-gray-600 dark:text-gray-400 line-clamp-2">
+                          {zone.address}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div className="flex space-x-1.5 ml-2">
+
+                  {/* Lien détails */}
                   <Link
                     to={`/zones/${zone.id}`}
-                    className="p-2 text-gray-500 hover:text-green-600 dark:hover:text-green-400 rounded-xl hover:bg-green-50 dark:hover:bg-green-900/20 transition-all"
-                    title="Modifier"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-lime-700 dark:text-lime-400 hover:text-lime-600 dark:hover:text-lime-300 transition-colors"
                   >
-                    <Edit size={18} strokeWidth={2} />
+                    Voir les détails
+                    <ArrowUpRight size={14} strokeWidth={2.5} />
                   </Link>
-                  <button
-                    onClick={() => handleDelete(zone.id)}
-                    className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-                    title="Supprimer"
-                  >
-                    <Trash2 size={18} strokeWidth={2} />
-                  </button>
                 </div>
-              </div>
-              <div className="space-y-2.5 text-sm mb-4">
-                <p className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">Gérant:</span>
-                  <span className="truncate">{zone.manager_phone}</span>
-                </p>
-                {zone.address && (
-                  <p className="text-gray-600 dark:text-gray-400 line-clamp-2">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">Adresse:</span> {zone.address}
-                  </p>
-                )}
-              </div>
-              <Link
-                to={`/zones/${zone.id}`}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition-colors group/link"
-              >
-                Voir les détails
-                <span className="group-hover/link:translate-x-1 transition-transform">→</span>
-              </Link>
+              ))}
             </div>
-          ))}
-        </div>
           )}
         </>
       )}
     </div>
   );
 }
-
-
