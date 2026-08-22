@@ -4,6 +4,7 @@ import { getWifiZones, deleteWifiZone } from '../services/wifiZones';
 import toast from 'react-hot-toast';
 import { Plus, MapPin, Trash2, Edit, Wifi, Phone, ArrowUpRight, Server } from 'lucide-react';
 import CreateWifiZone from './CreateWifiZone';
+import { SkeletonHeader, SkeletonGrid } from '../components/Skeleton';
 
 export default function WifiZones() {
   const [zones, setZones] = useState([]);
@@ -48,8 +49,9 @@ export default function WifiZones() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-lime-400/25 border-t-lime-400"></div>
+      <div className="space-y-5 md:space-y-6 w-full">
+        <SkeletonHeader />
+        <SkeletonGrid count={6} />
       </div>
     );
   }

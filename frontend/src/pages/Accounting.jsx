@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getWifiZones } from '../services/wifiZones';
 import { getPaymentStats, getTicketsSoldStats, getPaymentHistory, exportPaymentHistoryCSV } from '../services/accounting';
 import toast from 'react-hot-toast';
+import { Skeleton, SkeletonTable } from '../components/Skeleton';
 import { 
   BarChart, 
   Bar, 
@@ -164,29 +165,23 @@ export default function Accounting() {
     <div className="space-y-6 md:space-y-8 w-full">
       {/* En-tête */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-green-700 dark:text-green-500 tracking-tight">
-          Bienvenue dans votre espace d'administration de Ticket Wifi Zone
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+          Comptabilité
         </h1>
-        <nav className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          <span>Accueil</span>
-          <span className="mx-2">/</span>
-          <span>Gestion de comptabilité</span>
-          <span className="mx-2">/</span>
-          <span className="text-green-600 dark:text-green-400 font-medium">
-            Historique des paiements
-          </span>
-        </nav>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Chiffre d'affaires et historique des paiements
+        </p>
       </div>
 
       {/* Graphique 1: Statistiques des paiements */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-4 md:p-6 lg:p-8">
+      <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 p-5 md:p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
           <div className="flex items-center space-x-3 mb-4 sm:mb-0">
-            <div className="p-2 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-xl shadow-sm">
-              <TrendingUp className="text-green-600 dark:text-green-400" size={24} strokeWidth={2.5} />
+            <div className="w-9 h-9 rounded-xl bg-lime-50 dark:bg-lime-400/10 flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="text-lime-600 dark:text-lime-400" size={24} strokeWidth={2.5} />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
                 Statistiques des paiements
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Chiffre d'affaires</p>
@@ -224,8 +219,10 @@ export default function Accounting() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-500"></div>
+          <div className="h-64 flex flex-col justify-end gap-2 pb-6">
+            {[70, 45, 85, 55, 90, 40, 65].map((h, i) => (
+              <Skeleton key={i} className="w-full" style={{ height: 6 }} />
+            ))}
           </div>
         ) : paymentStats.length === 0 ? (
           <div className="text-center py-12">
@@ -237,11 +234,11 @@ export default function Accounting() {
               <BarChart data={paymentStats} margin={{ top: 20, right: 20, left: 10, bottom: 60 }}>
                 <defs>
                   <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.9} />
-                    <stop offset="100%" stopColor="#34d399" stopOpacity={0.7} />
+                    <stop offset="0%" stopColor="#a3e635" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#84cc16" stopOpacity={0.7} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#d1fae5" strokeOpacity={0.3} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#9ca3af" strokeOpacity={0.3} />
                 <XAxis 
                   dataKey="day" 
                   tick={{ fontSize: 11, fill: '#6b7280' }}
@@ -264,14 +261,14 @@ export default function Accounting() {
                     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
                     padding: '12px'
                   }}
-                  labelStyle={{ color: '#10b981', fontWeight: '600', marginBottom: '4px' }}
+                  labelStyle={{ color: '#84cc16', fontWeight: '600', marginBottom: '4px' }}
                   itemStyle={{ color: '#374151' }}
                 />
                 <Bar 
                   dataKey="revenue" 
                   fill="url(#revenueGradient)" 
                   radius={[12, 12, 0, 0]}
-                  stroke="#10b981"
+                  stroke="#a3e635"
                   strokeWidth={1}
                 />
               </BarChart>
@@ -281,14 +278,14 @@ export default function Accounting() {
       </div>
 
       {/* Graphique 2: Nombre de tickets vendus */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-4 md:p-6 lg:p-8">
+      <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 p-5 md:p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
           <div className="flex items-center space-x-3 mb-4 sm:mb-0">
-            <div className="p-2 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-xl shadow-sm">
-              <Ticket className="text-green-600 dark:text-green-400" size={24} strokeWidth={2.5} />
+            <div className="w-9 h-9 rounded-xl bg-lime-50 dark:bg-lime-400/10 flex items-center justify-center flex-shrink-0">
+              <Ticket className="text-lime-600 dark:text-lime-400" size={24} strokeWidth={2.5} />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
                 Nombre de tickets vendus
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Ventes réalisées</p>
@@ -317,8 +314,10 @@ export default function Accounting() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-500"></div>
+          <div className="h-64 flex flex-col justify-end gap-2 pb-6">
+            {[70, 45, 85, 55, 90, 40, 65].map((h, i) => (
+              <Skeleton key={i} className="w-full" style={{ height: 6 }} />
+            ))}
           </div>
         ) : ticketsStats.length === 0 ? (
           <div className="text-center py-12">
@@ -330,11 +329,11 @@ export default function Accounting() {
               <BarChart data={ticketsStats} margin={{ top: 20, right: 20, left: 10, bottom: 60 }}>
                 <defs>
                   <linearGradient id="ticketsGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.9} />
-                    <stop offset="100%" stopColor="#34d399" stopOpacity={0.7} />
+                    <stop offset="0%" stopColor="#a3e635" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#84cc16" stopOpacity={0.7} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#d1fae5" strokeOpacity={0.3} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#9ca3af" strokeOpacity={0.3} />
                 <XAxis 
                   dataKey="day" 
                   tick={{ fontSize: 11, fill: '#6b7280' }}
@@ -357,14 +356,14 @@ export default function Accounting() {
                     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
                     padding: '12px'
                   }}
-                  labelStyle={{ color: '#10b981', fontWeight: '600', marginBottom: '4px' }}
+                  labelStyle={{ color: '#84cc16', fontWeight: '600', marginBottom: '4px' }}
                   itemStyle={{ color: '#374151' }}
                 />
                 <Bar 
                   dataKey="tickets_sold" 
                   fill="url(#ticketsGradient)" 
                   radius={[12, 12, 0, 0]}
-                  stroke="#10b981"
+                  stroke="#a3e635"
                   strokeWidth={1}
                 />
               </BarChart>
@@ -374,14 +373,14 @@ export default function Accounting() {
       </div>
 
       {/* Section Mes Recettes */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-4 md:p-6 lg:p-8">
+      <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 p-5 md:p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
           <div className="flex items-center space-x-3 mb-4 sm:mb-0">
-            <div className="p-2 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-xl shadow-sm">
-              <Clock className="text-green-600 dark:text-green-400" size={24} strokeWidth={2.5} />
+            <div className="w-9 h-9 rounded-xl bg-lime-50 dark:bg-lime-400/10 flex items-center justify-center flex-shrink-0">
+              <Clock className="text-lime-600 dark:text-lime-400" size={24} strokeWidth={2.5} />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
                 Mes Recettes
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Historique des paiements</p>
@@ -390,11 +389,11 @@ export default function Accounting() {
         </div>
 
         {/* Filtres de date et export */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 pb-6 border-b border-green-100 dark:border-gray-700">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 pb-6 border-b border-gray-200 dark:border-white/10">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
             <div className="flex items-center space-x-2">
-              <div className="p-1.5 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-lg">
-                <Calendar size={16} className="text-green-600 dark:text-green-400" />
+              <div className="w-7 h-7 rounded-lg bg-lime-50 dark:bg-lime-400/10 flex items-center justify-center flex-shrink-0">
+                <Calendar size={16} className="text-lime-600 dark:text-lime-400" />
               </div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Du</label>
               <input
@@ -405,8 +404,8 @@ export default function Accounting() {
               />
             </div>
             <div className="flex items-center space-x-2">
-              <div className="p-1.5 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-lg">
-                <Calendar size={16} className="text-green-600 dark:text-green-400" />
+              <div className="w-7 h-7 rounded-lg bg-lime-50 dark:bg-lime-400/10 flex items-center justify-center flex-shrink-0">
+                <Calendar size={16} className="text-lime-600 dark:text-lime-400" />
               </div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Au</label>
               <input
@@ -432,11 +431,11 @@ export default function Accounting() {
           <button
             onClick={handleExportCSV}
             disabled={exporting}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+            className="inline-flex items-center justify-center gap-2 h-11 px-5 text-sm font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] rounded-xl shadow-lg shadow-lime-400/25 transition-colors disabled:opacity-50"
           >
             {exporting ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                <span className="h-4 w-4 rounded-full border-2 border-[#0A1005]/30 border-t-[#0A1005] animate-spin mr-2" />
                 Export...
               </>
             ) : (
@@ -450,8 +449,8 @@ export default function Accounting() {
 
         {/* Recherche et pagination */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-          <div className="flex items-center space-x-2 flex-1 max-w-md bg-gradient-to-r from-green-50 to-white dark:from-green-900/10 dark:to-gray-800/50 rounded-xl px-3 py-2 border border-green-100 dark:border-gray-700">
-            <Search size={18} className="text-green-600 dark:text-green-400" />
+          <div className="flex items-center space-x-2 flex-1 max-w-md bg-gray-100 dark:bg-white/[0.04] rounded-xl px-3 py-2 border border-transparent dark:border-white/[0.06]">
+            <Search size={18} className="text-lime-600 dark:text-lime-400" />
             <form onSubmit={handleSearch} className="flex-1">
               <input
                 type="text"
@@ -482,18 +481,16 @@ export default function Accounting() {
 
         {/* Tableau */}
         {loadingPayments ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-500"></div>
-          </div>
+          <SkeletonTable rows={6} cols={6} />
         ) : payments.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">Aucun paiement trouvé</p>
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto rounded-xl border border-green-100 dark:border-gray-700">
+            <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-white/10">
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-green-50 to-green-50/50 dark:from-green-900/20 dark:to-green-800/10">
+                <thead className="bg-gray-50 dark:bg-white/[0.03]">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                       WIFIZONE
@@ -524,16 +521,16 @@ export default function Accounting() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-green-100 dark:divide-gray-700">
+                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                   {payments.map((payment) => (
-                    <tr key={payment.id} className="hover:bg-gradient-to-r hover:from-green-50/50 hover:to-white dark:hover:from-green-900/10 dark:hover:to-gray-700/50 transition-colors">
+                    <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white font-semibold">
                         {payment.zone_name || 'N/A'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 font-medium">
                         {payment.pricing_amount ? `${parseFloat(payment.pricing_amount).toLocaleString()} XOF` : `${parseFloat(payment.amount).toLocaleString()} XOF`}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-green-600 dark:text-green-400">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-lime-600 dark:text-lime-400">
                         {payment.revenue ? `${parseFloat(payment.revenue).toFixed(2)} XOF` : 'N/A'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
@@ -554,7 +551,7 @@ export default function Accounting() {
                       <td className="px-4 py-3 whitespace-nowrap text-sm">
                         {payment.ticket && (
                           <button
-                            className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-all p-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 hover:scale-110"
+                            className="text-lime-600 dark:text-lime-400 hover:text-green-700 dark:hover:text-green-300 transition-all p-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 hover:scale-110"
                             title={`Username: ${payment.ticket.username}, Password: ${payment.ticket.password}`}
                           >
                             <Eye size={18} strokeWidth={2} />
@@ -568,7 +565,7 @@ export default function Accounting() {
             </div>
 
             {/* Pagination */}
-            <div className="flex flex-col sm:flex-row items-center justify-between mt-4 pt-4 border-t border-green-100 dark:border-gray-700">
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 sm:mb-0">
                 Affichage de {(page - 1) * limit + 1} à {Math.min(page * limit, totalPayments)} sur {totalPayments} entrées
               </p>

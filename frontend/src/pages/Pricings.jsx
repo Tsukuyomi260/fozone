@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getWifiZones } from '../services/wifiZones';
 import { getPricingsByZone, createPricing, deletePricing, updatePricing } from '../services/pricings';
 import toast from 'react-hot-toast';
+import { SkeletonHeader, SkeletonGrid } from '../components/Skeleton';
 import { Plus, Tag, Wifi, DollarSign, Clock, FileText, Edit, Trash2, Check, X, Menu, Info } from 'lucide-react';
 
 export default function Pricings() {
@@ -71,8 +72,9 @@ export default function Pricings() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+      <div className="space-y-5 md:space-y-6 w-full">
+        <SkeletonHeader />
+        <SkeletonGrid count={6} />
       </div>
     );
   }

@@ -4,6 +4,7 @@ import { getGlobalStats } from '../services/dashboard';
 import { getWifiZones } from '../services/wifiZones';
 import toast from 'react-hot-toast';
 import { Wifi, DollarSign, Ticket, TrendingUp, MapPin, ArrowUpRight, BarChart3 } from 'lucide-react';
+import { SkeletonHeader, SkeletonStats, SkeletonCard, SkeletonList, Skeleton } from '../components/Skeleton';
 
 /**
  * Jauge circulaire: reprend le principe de l'objectif chiffre du dashboard
@@ -72,8 +73,21 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-lime-400/25 border-t-lime-400"></div>
+      <div className="space-y-5 md:space-y-6 w-full">
+        <SkeletonHeader action={false} />
+        <SkeletonStats count={4} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <SkeletonCard className="lg:col-span-2 p-5 md:p-6">
+            <Skeleton className="h-5 w-32 mb-5" />
+            <SkeletonList rows={4} />
+          </SkeletonCard>
+          <SkeletonCard className="p-6 space-y-4">
+            <Skeleton className="h-6 w-28 rounded-full" />
+            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-12 w-full rounded-xl" />
+          </SkeletonCard>
+        </div>
       </div>
     );
   }
@@ -105,10 +119,16 @@ export default function Dashboard() {
       unit: 'XOF',
       hint: `Net · ${todayTickets} ticket${todayTickets > 1 ? 's' : ''} aujourd'hui`,
       icon: TrendingUp,
+      // Le chiffre du jour est celui qu'on regarde en premier: il porte l'accent
+      accent: true,
     },
   ];
 
   const card = 'rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30';
+
+  // Aplat lime, comme l'encart du jour: c'est le chiffre qu'on regarde en premier
+  const cardAccent =
+    'rounded-2xl bg-gradient-to-br from-lime-400 to-lime-500 dark:from-lime-400 dark:to-lime-600 shadow-lg shadow-lime-500/20';
 
   return (
     <div className="space-y-5 md:space-y-6 w-full">
@@ -135,23 +155,43 @@ export default function Dashboard() {
           return (
             <div
               key={index}
-              className={`${card} p-5 transition-colors hover:border-lime-400/40 dark:hover:border-lime-400/30`}
+              className={`${stat.accent ? cardAccent : card} p-5 transition-colors ${
+                stat.accent ? '' : 'hover:border-lime-400/40 dark:hover:border-lime-400/30'
+              }`}
             >
               <div className="flex items-center justify-between mb-4">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <p className={`text-xs font-medium ${
+                  stat.accent
+                    ? 'text-[#0A1005]/70'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}>
                   {stat.title}
                 </p>
-                <Icon className="text-lime-600 dark:text-lime-400" size={16} strokeWidth={2.5} />
+                <Icon className={stat.accent ? 'text-[#0A1005]' : 'text-lime-600 dark:text-lime-400'} size={16} strokeWidth={2.5} />
               </div>
-              <p className="text-2xl md:text-[28px] leading-none font-bold text-gray-900 dark:text-white tracking-tight break-words">
+              <p className={`text-2xl md:text-[28px] leading-none font-bold tracking-tight break-words ${
+                stat.accent
+                  ? 'text-[#0A1005]'
+                  : 'text-gray-900 dark:text-white'
+              }`}>
                 {stat.value}
                 {stat.unit && (
-                  <span className="text-sm font-semibold text-gray-400 dark:text-gray-500 ml-1.5">
+                  <span className={`text-sm font-semibold ml-1.5 ${
+                    stat.accent
+                      ? 'text-[#0A1005]/60'
+                      : 'text-gray-400 dark:text-gray-500'
+                  }`}>
                     {stat.unit}
                   </span>
                 )}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{stat.hint}</p>
+              <p className={`text-xs mt-2 ${
+                stat.accent
+                  ? 'text-[#0A1005]/70 font-medium'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}>
+                {stat.hint}
+              </p>
             </div>
           );
         })}

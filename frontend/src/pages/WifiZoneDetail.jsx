@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getWifiZoneById, updateWifiZone, deleteWifiZone } from '../services/wifiZones';
 import toast from 'react-hot-toast';
 import { getFrontendUrl } from '../config/env';
+import { Skeleton, SkeletonCard, SkeletonHeader } from '../components/Skeleton';
 import { 
   ArrowLeft, 
   Copy, 
@@ -175,17 +176,39 @@ export default function WifiZoneDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+      <div className="space-y-5 md:space-y-6 w-full">
+        <Skeleton className="h-4 w-32" />
+        <SkeletonHeader />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {[0, 1].map((i) => (
+            <SkeletonCard key={i} className="p-5 md:p-6 space-y-4">
+              <Skeleton className="h-5 w-44" />
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-11 w-full rounded-xl" />
+            </SkeletonCard>
+          ))}
+        </div>
+        <SkeletonCard className="p-5 md:p-6 space-y-4">
+          <Skeleton className="h-5 w-36" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-11 rounded-xl" />
+            ))}
+          </div>
+        </SkeletonCard>
       </div>
     );
   }
 
   if (!zone) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-600 dark:text-gray-400">Zone non trouvée</p>
-        <Link to="/zones" className="inline-block mt-4 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105">
+      <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] text-center py-16 px-6">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Zone introuvable</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">Elle a peut-être été supprimée</p>
+        <Link to="/zones" className="inline-flex items-center justify-center gap-2 h-11 px-5 text-sm font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] rounded-xl shadow-lg shadow-lime-400/25 transition-colors">
           Retour aux zones
         </Link>
       </div>
@@ -193,57 +216,59 @@ export default function WifiZoneDetail() {
   }
 
   return (
-    <div className="space-y-6 md:space-y-8 w-full">
-      {/* En-tête */}
-      <div className="flex items-center justify-between">
-        <Link to="/zones" className="flex items-center text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-500 transition-colors">
-          <ArrowLeft size={20} className="mr-2" />
-          Retour aux zones
-        </Link>
-        <div className="flex items-center gap-3">
-          {!editing && (
-            <>
-              <button
-                onClick={() => setEditing(true)}
-                className="btn btn-secondary inline-flex items-center gap-2"
-              >
-                <Edit2 size={18} strokeWidth={2} />
-                Modifier
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="btn btn-danger inline-flex items-center gap-2"
-              >
-                {deleting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Suppression...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 size={18} strokeWidth={2} />
-                    Supprimer
-                  </>
-                )}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+    <div className="space-y-5 md:space-y-6 w-full">
+      {/* Fil de retour */}
+      <Link
+        to="/zones"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+      >
+        <ArrowLeft size={14} strokeWidth={2.5} />
+        Retour aux zones
+      </Link>
 
-      <div>
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight mb-2">
-          {zone.name}
-        </h1>
-        <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 font-medium">
-          Détails de la zone Wi-Fi
-        </p>
+      {/* En-tête */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight truncate">
+            {zone.name}
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono">
+            {zone.router_ip}
+          </p>
+        </div>
+        {!editing && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setEditing(true)}
+              className="inline-flex items-center justify-center gap-2 h-10 px-4 text-sm font-semibold rounded-xl border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors"
+            >
+              <Edit2 size={15} strokeWidth={2.2} />
+              Modifier
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="inline-flex items-center justify-center gap-2 h-10 px-4 text-sm font-semibold rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50"
+            >
+              {deleting ? (
+                <>
+                  <span className="h-3.5 w-3.5 rounded-full border-2 border-red-400/30 border-t-red-500 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                <>
+                  <Trash2 size={15} strokeWidth={2.2} />
+                  Supprimer
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Formulaire d'édition */}
       {editing ? (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 md:p-8">
+        <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 p-6 md:p-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
               Modifier la zone Wi-Fi
@@ -363,8 +388,8 @@ export default function WifiZoneDetail() {
         <>
           {/* Informations générales */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 md:p-8">
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+            <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 p-6 md:p-8">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
                 <MapPin size={24} strokeWidth={2} />
                 Informations générales
               </h2>
@@ -405,8 +430,8 @@ export default function WifiZoneDetail() {
             </div>
 
             {/* Liens et intégration */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 md:p-8">
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+            <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 p-6 md:p-8">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
                 <LinkIcon size={24} strokeWidth={2} />
                 Liens et intégration
               </h2>
@@ -495,7 +520,7 @@ export default function WifiZoneDetail() {
           </div>
 
           {/* Actions rapides */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 md:p-8">
+          <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 p-6 md:p-8">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-6">
               Actions rapides
             </h2>

@@ -4,6 +4,7 @@ import { getWifiZones } from '../services/wifiZones';
 import { getPricingsByZone } from '../services/pricings';
 import { importTickets, getTicketsByZone, getTicketStats, deleteTicket, deleteAllTickets } from '../services/tickets';
 import toast from 'react-hot-toast';
+import { SkeletonHeader, SkeletonTable } from '../components/Skeleton';
 import { 
   Upload, 
   FileText, 
@@ -241,8 +242,9 @@ export default function Tickets() {
 
   if (loadingZones) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+      <div className="space-y-5 md:space-y-6 w-full">
+        <SkeletonHeader />
+        <SkeletonTable rows={6} cols={5} />
       </div>
     );
   }
