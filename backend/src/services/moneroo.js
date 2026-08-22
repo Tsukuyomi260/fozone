@@ -13,6 +13,15 @@ const logger = require('../config/logger');
 const baseUrl = process.env.MONEROO_BASE_URL || 'https://api.moneroo.io';
 const MONEROO_BASE_URL = baseUrl.endsWith('/v1') ? baseUrl : `${baseUrl}/v1`;
 const MONEROO_API_KEY = process.env.MONEROO_API_KEY;
+
+// Le mode depend uniquement de la cle: les cles sandbox commencent par test_
+const IS_SANDBOX = (MONEROO_API_KEY || '').startsWith('test_');
+
+// La passerelle de test Moneroo n'apparait sur la page de paiement que si elle
+// est explicitement demandee. On ne l'expose qu'en sandbox.
+const DEFAULT_METHODS = IS_SANDBOX
+  ? ['moneroo_payment_demo', 'mtn_bj', 'moov_bj']
+  : ['mtn_bj', 'moov_bj'];
 const MONEROO_WEBHOOK_SECRET = process.env.MONEROO_WEBHOOK_SECRET;
 
 // Logger la configuration au démarrage (sans exposer la clé complète)
@@ -20,7 +29,8 @@ if (MONEROO_API_KEY) {
   logger.info('Moneroo API Key configured', {
     keyLength: MONEROO_API_KEY.length,
     keyPrefix: MONEROO_API_KEY.substring(0, 8) + '...',
-    baseUrl: MONEROO_BASE_URL
+    baseUrl: MONEROO_BASE_URL,
+    mode: IS_SANDBOX ? 'SANDBOX' : 'LIVE'
   });
 } else {
   logger.warn('⚠️  MONEROO_API_KEY is not configured! Payments will fail.');
@@ -64,7 +74,7 @@ async function createPayment(paymentData) {
       return_url,
       customer,
       metadata = {},
-      methods = ['mtn_bj', 'moov_bj'] // Par défaut pour le Bénin
+      methods = DEFAULT_METHODS // Bénin, + passerelle de test en sandbox
     } = paymentData;
 
     // Préparer le payload selon la documentation Moneroo
