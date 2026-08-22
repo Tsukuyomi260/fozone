@@ -227,7 +227,7 @@ export default function Tickets() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      free: { bg: 'bg-green-100 dark:bg-green-900/20', text: 'text-green-800 dark:text-green-300', label: 'Libre' },
+      free: { bg: 'bg-lime-100 dark:bg-lime-400/10', text: 'text-lime-800 dark:text-lime-300', label: 'Libre' },
       reserved: { bg: 'bg-yellow-100 dark:bg-yellow-900/20', text: 'text-yellow-800 dark:text-yellow-300', label: 'Réservé' },
       sold: { bg: 'bg-blue-100 dark:bg-blue-900/20', text: 'text-blue-800 dark:text-blue-300', label: 'Vendu' },
       expired: { bg: 'bg-red-100 dark:bg-red-900/20', text: 'text-red-800 dark:text-red-300', label: 'Expiré' }
@@ -249,103 +249,64 @@ export default function Tickets() {
     );
   }
 
+  const card =
+    'rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30';
+
+  const primaryBtn =
+    'inline-flex items-center justify-center gap-2 h-11 px-5 text-sm font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] rounded-xl shadow-lg shadow-lime-400/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+
   return (
-    <div className="space-y-6 md:space-y-8 w-full">
+    <div className="space-y-5 md:space-y-6 w-full">
       {/* En-tête */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-green-700 dark:text-green-500 tracking-tight">
-          Ajoutez de nouveaux tickets Wifi Zone
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+          Tickets
         </h1>
-        <nav className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          <span>Accueil</span>
-          <span className="mx-2">/</span>
-          <span>Gestion des accès WiFi</span>
-          <span className="mx-2">/</span>
-          <span className="text-green-600 dark:text-green-400 font-medium">
-            {showList ? 'Consulter liste ticket' : 'Ajouter un ticket'}
-          </span>
-        </nav>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {showList ? 'Consultez vos tickets Wi-Fi' : 'Importez de nouveaux tickets'}
+        </p>
       </div>
 
-      {/* Section Statistiques */}
+      {/* Indicateurs de stock */}
       {showList && selectedZone && stats && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-5 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
-                  Total
-                </p>
-                <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                  {stats.total || 0}
-                </p>
-              </div>
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-xl">
-                <Ticket className="text-blue-600 dark:text-blue-400" size={24} strokeWidth={2.5} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-5 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
-                  Libres
-                </p>
-                <p className="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">
-                  {stats.free || 0}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: 'Total', value: stats.total || 0, icon: Ticket, tone: 'neutral' },
+            { label: 'Libres', value: stats.free || 0, icon: CheckCircle, tone: 'lime' },
+            { label: 'Vendus', value: stats.sold || 0, icon: TrendingUp, tone: 'blue' },
+            { label: 'Réservés', value: stats.reserved || 0, icon: Clock, tone: 'amber' },
+          ].map(({ label, value, icon: Icon, tone }) => {
+            // Le stock de tickets libres est l'indicateur critique: il porte l'accent
+            const toneClass = {
+              neutral: 'text-gray-900 dark:text-white',
+              lime: 'text-lime-600 dark:text-lime-400',
+              blue: 'text-blue-600 dark:text-blue-400',
+              amber: 'text-amber-600 dark:text-amber-400',
+            }[tone];
+            return (
+              <div key={label} className={`${card} p-5`}>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</p>
+                  <Icon className={toneClass} size={16} strokeWidth={2.5} />
+                </div>
+                <p className={`text-2xl md:text-[28px] leading-none font-bold tracking-tight ${toneClass}`}>
+                  {value}
                 </p>
               </div>
-              <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-xl">
-                <CheckCircle className="text-green-600 dark:text-green-400" size={24} strokeWidth={2.5} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-5 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
-                  Vendus
-                </p>
-                <p className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {stats.sold || 0}
-                </p>
-              </div>
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-xl">
-                <TrendingUp className="text-blue-600 dark:text-blue-400" size={24} strokeWidth={2.5} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-5 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
-                  Réservés
-                </p>
-                <p className="text-xl md:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                  {stats.reserved || 0}
-                </p>
-              </div>
-              <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-xl">
-                <Clock className="text-yellow-600 dark:text-yellow-400" size={24} strokeWidth={2.5} />
-              </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
-
       {/* Formulaire d'import ou Liste des tickets */}
       {!showList ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-4 md:p-6 lg:p-8">
+        <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 p-5 md:p-6">
           {/* En-tête de section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
             <div className="flex items-center space-x-3 mb-4 sm:mb-0">
-              <div className="p-2 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-xl shadow-sm">
-                <Tag className="text-green-600 dark:text-green-400" size={24} strokeWidth={2.5} />
+              <div className="w-9 h-9 rounded-xl bg-lime-50 dark:bg-lime-400/10 flex items-center justify-center flex-shrink-0">
+                <Tag className="text-lime-600 dark:text-lime-400" size={24} strokeWidth={2.5} />
               </div>
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
                 Ajouter un ticket
               </h2>
             </div>
@@ -365,10 +326,10 @@ export default function Tickets() {
           </div>
 
           {/* Notice importante */}
-          <div className="bg-gradient-to-r from-green-50 to-green-50/50 dark:from-green-900/20 dark:to-green-800/10 border border-green-200 dark:border-green-800 rounded-xl p-4 mb-6">
+          <div className="bg-lime-50 dark:bg-lime-400/[0.07] border border-lime-200 dark:border-lime-400/20 rounded-xl p-4 mb-6">
             <div className="flex items-start space-x-3">
-              <Info className="text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" size={20} strokeWidth={2} />
-              <p className="text-sm text-green-800 dark:text-green-300">
+              <Info className="text-lime-600 dark:text-lime-400 flex-shrink-0 mt-0.5" size={20} strokeWidth={2} />
+              <p className="text-sm text-lime-800 dark:text-lime-300">
                 <strong>Conseil :</strong> Pour faciliter la création de nouveaux tickets, vous devez importer les fichiers au format CSV, générés depuis votre routeur MikroTik.
               </p>
             </div>
@@ -472,7 +433,7 @@ export default function Tickets() {
               >
                 {loading ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span className="h-4 w-4 rounded-full border-2 border-[#0A1005]/30 border-t-[#0A1005] animate-spin" />
                     Import en cours...
                   </>
                 ) : (
@@ -488,11 +449,11 @@ export default function Tickets() {
       ) : (
         <div className="space-y-6">
           {/* En-tête liste */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 p-5 md:p-6">
             <div className="flex flex-col space-y-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
                 <div>
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
                     Liste des tickets
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -515,7 +476,7 @@ export default function Tickets() {
                     >
                       {deleting ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          <span className="h-4 w-4 rounded-full border-2 border-[#0A1005]/30 border-t-[#0A1005] animate-spin mr-2" />
                           Suppression...
                         </>
                       ) : (
@@ -624,27 +585,25 @@ export default function Tickets() {
 
           {/* Liste des tickets */}
           {loadingTickets ? (
-            <div className="flex items-center justify-center h-48">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
-            </div>
+            <SkeletonTable rows={6} cols={5} />
           ) : tickets.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 md:p-12 text-center">
+            <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 py-16 px-6 text-center">
               <Ticket className="mx-auto text-gray-400 mb-4" size={48} strokeWidth={2} />
               <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Aucun ticket</p>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Importez des tickets pour commencer</p>
               <button
                 onClick={() => setShowList(false)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                className="inline-flex items-center justify-center gap-2 h-11 px-5 text-sm font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] rounded-xl shadow-lg shadow-lime-400/25 transition-colors"
               >
                 <Upload size={18} strokeWidth={2.5} />
                 Importer des tickets
               </button>
             </div>
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-700/50">
+                  <thead className="bg-gray-50 dark:bg-white/[0.03]">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Username
@@ -666,7 +625,7 @@ export default function Tickets() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                     {tickets.map((ticket) => (
                       <tr key={ticket.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
