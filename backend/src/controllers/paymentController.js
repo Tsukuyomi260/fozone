@@ -251,6 +251,16 @@ async function handleMonerooWebhook(req, res, next) {
         }
       }
 
+      if (!payerPhone) {
+        // Moneroo ne place pas toujours le numero au meme endroit selon la
+        // passerelle. On journalise le dossier complet une fois pour toutes
+        // afin de reperer le champ exact et cibler l'extraction ensuite.
+        logger.warn(
+          'Payer phone not found for ' + paymentId + ' - payload: ' +
+          JSON.stringify(webhookPayload.data)
+        );
+      }
+
       // Mettre à jour le statut du paiement
       const { error: updateError } = await supabaseAdmin
         .from('payments')
@@ -437,6 +447,18 @@ async function getPaymentStatus(req, res, next) {
                 payment: updatedPayment
               });
             }
+
+            // Sans cette trace, un paiement encaisse sans ticket ne laisse
+            // aucune trace: le client repart les mains vides en silence.
+            logger.error(
+              'PAYMENT WITHOUT TICKET - action requise: paiement ' + payment.id +
+              ' confirme via verify pour la zone ' + payment.wifi_zone_id +
+              ' mais aucun ticket attribue. Cause: ' + ticketResult.error
+            );
+          } else {
+            logger.error(
+              'Error marking payment ' + payment.id + ' as completed: ' + updateError.message
+            );
           }
         }
       }
