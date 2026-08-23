@@ -159,7 +159,17 @@ async function getProfile(req, res, next) {
       .eq('id', req.user.id)
       .single();
 
-    if (error || !user) {
+    // Distinguer une vraie absence d'un echec de requete: confondre les deux
+    // a masque pendant longtemps une colonne manquante derriere un 404.
+    if (error) {
+      logger.error('Error loading profile:', { userId: req.user.id, error });
+      return res.status(500).json({
+        error: 'Failed to load profile',
+        details: error.message
+      });
+    }
+
+    if (!user) {
       return res.status(404).json({
         error: 'User not found'
       });

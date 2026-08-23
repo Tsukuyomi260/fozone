@@ -4,6 +4,7 @@ import { User, Edit3, Lock, Shield, Save, X, Eye, EyeOff } from 'lucide-react';
 import { getProfile, updateProfile, changePassword } from '../services/profile';
 import { getCurrentUser } from '../services/auth';
 import toast from 'react-hot-toast';
+import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -138,69 +139,89 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-500"></div>
+      <div className="space-y-5 md:space-y-6 w-full">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-40" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <SkeletonCard className="p-5 md:p-6 flex items-center gap-5">
+          <Skeleton className="w-16 h-16 rounded-full flex-shrink-0" />
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </SkeletonCard>
+        <SkeletonCard className="p-5 md:p-6 space-y-4">
+          <Skeleton className="h-9 w-full rounded-xl" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-11 w-full rounded-xl" />
+              </div>
+            ))}
+          </div>
+        </SkeletonCard>
       </div>
     );
   }
 
+  const card =
+    'rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30';
+
   return (
-    <div className="space-y-6 md:space-y-8 w-full">
+    <div className="space-y-5 md:space-y-6 w-full">
       {/* En-tête */}
-      <div className="mb-6 md:mb-8">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight mb-2">
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
           Mon Profil
         </h1>
-        <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 font-medium">
-          Gérez vos informations personnelles et vos paramètres de sécurité
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Vos informations personnelles et votre sécurité
         </p>
       </div>
 
       {/* Carte de profil utilisateur */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 p-6 md:p-8 hover-lift hover-glow">
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-          {/* Avatar */}
-          <div className="relative">
-            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white text-2xl md:text-3xl font-bold shadow-lg">
-              {getInitials(user?.full_name || user?.email || 'U')}
-            </div>
-            <div className="absolute bottom-0 right-0 w-6 h-6 md:w-8 md:h-8 bg-green-500 rounded-full border-4 border-white dark:border-gray-800"></div>
+      <div className={`${card} p-5 md:p-6`}>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-lime-400 flex items-center justify-center text-[#0A1005] text-xl font-extrabold flex-shrink-0">
+            {getInitials(user?.full_name || user?.email || 'U')}
           </div>
-
-          {/* Informations */}
-          <div className="flex-1 text-center md:text-left">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white truncate">
               {user?.full_name || user?.email || 'Utilisateur'}
             </h2>
-            <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 mb-4">
-              Profil utilisateur
-            </p>
-            {user?.role && (
-              <span className="inline-block px-3 py-1 text-xs md:text-sm font-semibold text-green-700 dark:text-green-400 bg-gradient-to-r from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-800/20 rounded-full">
-                {user.role === 'admin' ? 'Administrateur' : user.role}
-              </span>
-            )}
+            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+              {user?.role && (
+                <span className="inline-block px-2.5 py-1 text-[11px] font-bold rounded-full bg-lime-50 dark:bg-lime-400/10 text-lime-700 dark:text-lime-400">
+                  {user.role === 'admin' ? 'Administrateur' : user.role}
+                </span>
+              )}
+              {user?.email && (
+                <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Onglets */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-green-100 dark:border-gray-700 hover-glow">
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="flex overflow-x-auto -mb-px">
+      <div className={card}>
+        <div className="p-2 overflow-x-auto">
+          <nav className="flex gap-1 min-w-max">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 md:px-6 py-4 text-sm md:text-base font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors whitespace-nowrap ${
                     activeTab === tab.id
-                      ? 'border-green-600 text-green-600 dark:text-green-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                      ? 'bg-lime-400 text-[#0A1005]'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
-                  <Icon size={18} strokeWidth={2} />
+                  <Icon size={16} strokeWidth={2.2} />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -213,7 +234,7 @@ export default function Profile() {
           {/* Onglet Aperçu */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-6">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white mb-6">
                 Détails du Profil
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -221,7 +242,7 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Nom
                   </label>
-                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600">
+                  <div className="px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm text-gray-900 dark:text-white">
                     {user?.full_name?.split(' ')[0] || 'Non renseigné'}
                   </div>
                 </div>
@@ -229,7 +250,7 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Prénom
                   </label>
-                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600">
+                  <div className="px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm text-gray-900 dark:text-white">
                     {user?.full_name?.split(' ').slice(1).join(' ') || 'Non renseigné'}
                   </div>
                 </div>
@@ -237,7 +258,7 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Email
                   </label>
-                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600">
+                  <div className="px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm text-gray-900 dark:text-white">
                     {user?.email || 'Non renseigné'}
                   </div>
                 </div>
@@ -245,7 +266,7 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Téléphone
                   </label>
-                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600">
+                  <div className="px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm text-gray-900 dark:text-white">
                     {user?.phone || 'Non renseigné'}
                   </div>
                 </div>
@@ -253,7 +274,7 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Rôle
                   </label>
-                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600">
+                  <div className="px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm text-gray-900 dark:text-white">
                     {user?.role === 'admin' ? 'Administrateur' : user?.role || 'Non renseigné'}
                   </div>
                 </div>
@@ -261,7 +282,7 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Date de création
                   </label>
-                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600">
+                  <div className="px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm text-gray-900 dark:text-white">
                     {user?.created_at
                       ? format(new Date(user.created_at), 'dd MMMM yyyy', { locale: fr })
                       : 'Non renseigné'}
@@ -274,7 +295,7 @@ export default function Profile() {
           {/* Onglet Éditer le Profil */}
           {activeTab === 'edit' && (
             <form onSubmit={handleUpdateProfile} className="space-y-6">
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-6">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white mb-6">
                 Modifier vos informations
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -287,7 +308,7 @@ export default function Profile() {
                     id="full_name"
                     value={editForm.full_name}
                     onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
-                    className="input w-full"
+                    className="w-full h-11 px-3.5 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/15 transition-colors"
                     placeholder="Votre nom complet"
                   />
                 </div>
@@ -300,7 +321,7 @@ export default function Profile() {
                     id="email"
                     value={editForm.email}
                     onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                    className="input w-full"
+                    className="w-full h-11 px-3.5 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/15 transition-colors"
                     placeholder="votre@email.com"
                     required
                   />
@@ -314,7 +335,7 @@ export default function Profile() {
                     id="phone"
                     value={editForm.phone}
                     onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                    className="input w-full"
+                    className="w-full h-11 px-3.5 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/15 transition-colors"
                     placeholder="+229 XX XX XX XX"
                   />
                 </div>
@@ -323,11 +344,11 @@ export default function Profile() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                  className="inline-flex items-center justify-center gap-2 h-11 px-5 text-sm font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] rounded-xl shadow-lg shadow-lime-400/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span className="h-4 w-4 rounded-full border-2 border-[#0A1005]/30 border-t-[#0A1005] animate-spin" />
                       Enregistrement...
                     </>
                   ) : (
@@ -359,7 +380,7 @@ export default function Profile() {
           {/* Onglet Changer le Mot de Passe */}
           {activeTab === 'password' && (
             <form onSubmit={handleChangePassword} className="space-y-6">
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-6">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white mb-6">
                 Modifier votre mot de passe
               </h3>
               <div className="space-y-4 max-w-md">
@@ -373,7 +394,7 @@ export default function Profile() {
                       id="current_password"
                       value={passwordForm.current_password}
                       onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
-                      className="input w-full pr-10"
+                      className="w-full h-11 px-3.5 pr-10 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/15 transition-colors"
                       placeholder="Entrez votre mot de passe actuel"
                       required
                     />
@@ -396,7 +417,7 @@ export default function Profile() {
                       id="new_password"
                       value={passwordForm.new_password}
                       onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
-                      className="input w-full pr-10"
+                      className="w-full h-11 px-3.5 pr-10 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/15 transition-colors"
                       placeholder="Entrez votre nouveau mot de passe"
                       required
                       minLength={6}
@@ -423,7 +444,7 @@ export default function Profile() {
                       id="confirm_password"
                       value={passwordForm.confirm_password}
                       onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
-                      className="input w-full pr-10"
+                      className="w-full h-11 px-3.5 pr-10 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/15 transition-colors"
                       placeholder="Confirmez votre nouveau mot de passe"
                       required
                       minLength={6}
@@ -442,11 +463,11 @@ export default function Profile() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                  className="inline-flex items-center justify-center gap-2 h-11 px-5 text-sm font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] rounded-xl shadow-lg shadow-lime-400/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span className="h-4 w-4 rounded-full border-2 border-[#0A1005]/30 border-t-[#0A1005] animate-spin" />
                       Modification...
                     </>
                   ) : (
@@ -478,7 +499,7 @@ export default function Profile() {
           {/* Onglet Sécurité 2FA */}
           {activeTab === 'security' && (
             <div className="space-y-6">
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-6">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white mb-6">
                 Authentification à deux facteurs (2FA)
               </h3>
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
