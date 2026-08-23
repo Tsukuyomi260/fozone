@@ -7,7 +7,7 @@ const { supabaseAdmin } = require('../config/database');
 const logger = require('../config/logger');
 
 // Le taux est partage avec le dashboard: une seule source de verite
-const { COMMISSION_RATE, commissionOn } = require('../config/commission');
+const { COMMISSION_RATE, commissionOn, netAmount } = require('../config/commission');
 
 /**
  * Récupère les statistiques de paiements par période (pour graphiques)
@@ -74,7 +74,10 @@ async function getPaymentStats(req, res, next) {
       if (!dailyStats[dayKey]) {
         dailyStats[dayKey] = { revenue: 0, count: 0 };
       }
-      dailyStats[dayKey].revenue += parseFloat(payment.amount || 0);
+      // Ventes nettes: ce que le gerant touche, commission agregateur deduite.
+      // Le net est calcule paiement par paiement, comme dans le tableau, pour que
+      // le graphique et l'historique affichent exactement les memes chiffres.
+      dailyStats[dayKey].revenue += netAmount(payment.amount);
       dailyStats[dayKey].count += 1;
     });
 

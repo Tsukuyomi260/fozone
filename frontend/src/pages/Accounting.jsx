@@ -169,7 +169,7 @@ export default function Accounting() {
           Comptabilité
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Chiffre d'affaires et historique des paiements
+          Ventes nettes et historique des paiements
         </p>
       </div>
 
@@ -182,9 +182,9 @@ export default function Accounting() {
             </div>
             <div>
               <h2 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
-                Statistiques des paiements
+                Ventes par jour
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Chiffre d'affaires</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Net, commission déduite</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
