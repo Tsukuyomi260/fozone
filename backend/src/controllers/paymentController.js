@@ -50,7 +50,7 @@ async function createPaymentIntent(req, res, next) {
     // accepte depuis la requete, sinon le client fixerait son propre prix.
     const { data: pricing } = await supabaseAdmin
       .from('pricings')
-      .select('id, amount, description')
+      .select('id, name, amount, duration_hours, description')
       .eq('id', pricing_id)
       .eq('wifi_zone_id', wifi_zone_id)
       .eq('is_active', true)
