@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, Menu, X, Wifi, Home, DollarSign, Ticket, FileText, LogOut, Settings, Search, X as XIcon, ChevronLeft } from 'lucide-react';
+import { Moon, Sun, Menu, X, Wifi, Home, DollarSign, Ticket, FileText, LogOut, Settings, Search, X as XIcon, ChevronLeft, Wallet } from 'lucide-react';
 import { logout, getCurrentUser } from '../services/auth';
 import Logo from './Logo';
 
@@ -78,6 +78,7 @@ export default function Layout() {
       { path: '/pricings', keywords: ['tarifs', 'prix', 'forfaits', 'pricing'] },
       { path: '/tickets', keywords: ['tickets', 'billets', 'ticket'] },
       { path: '/accounting', keywords: ['comptabilité', 'compta', 'recettes', 'revenus', 'paiements'] },
+      { path: '/wallet', keywords: ['solde', 'retrait', 'retraits', 'versement', 'wallet'] },
       { path: '/profile', keywords: ['profil', 'compte', 'paramètres', 'settings'] },
     ];
 
@@ -112,6 +113,7 @@ export default function Layout() {
       label: 'Gestion',
       items: [
         { path: '/accounting', icon: FileText, label: 'Comptabilité' },
+        { path: '/wallet', icon: Wallet, label: 'Solde & Retraits' },
         { path: '/profile', icon: Settings, label: 'Mon Profil' },
       ],
     },

@@ -17,9 +17,11 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      const response = await login(email, password);
       toast.success('Connexion réussie !');
-      navigate('/dashboard');
+      // Le super-admin n'a aucune zone a lui: il atterrit sur son propre
+      // espace, jamais melange au dashboard promoteur.
+      navigate(response.user?.role === 'super_admin' ? '/admin' : '/dashboard');
     } catch (error) {
       console.error('[Login] Erreur:', error);
       toast.error(error.message || 'Identifiants incorrects');

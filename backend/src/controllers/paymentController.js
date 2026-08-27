@@ -7,6 +7,7 @@ const { supabaseAdmin } = require('../config/database');
 const { createPayment, verifyPayment, verifyWebhookSignature, parseWebhookPayload } = require('../services/moneroo');
 const { assignTicketAtomically } = require('../utils/ticketManager');
 const { checkIdempotency, saveIdempotency } = require('../utils/idempotency');
+const { platformFeeOn, netToTenant } = require('../config/platformCommission');
 const logger = require('../config/logger');
 
 /**
@@ -36,7 +37,7 @@ async function createPaymentIntent(req, res, next) {
     // Vérifier que la zone Wi-Fi existe
     const { data: zone, error: zoneError } = await supabaseAdmin
       .from('wifi_zones')
-      .select('id, name')
+      .select('id, name, owner_id')
       .eq('id', wifi_zone_id)
       .single();
 
@@ -109,6 +110,12 @@ async function createPaymentIntent(req, res, next) {
         // dependre d'une ligne pricings que le gerant peut supprimer ensuite.
         pricing_name: pricing.name,
         pricing_duration_hours: pricing.duration_hours,
+        // Montants figes a la vente. Recalculer plus tard depuis un taux
+        // devenu different fausserait retroactivement les soldes, y compris
+        // ceux deja verses au promoteur.
+        owner_id: zone.owner_id,
+        platform_fee: platformFeeOn(finalAmount),
+        net_to_tenant: netToTenant(finalAmount),
         status: 'pending',
         currency: 'XOF'
       })

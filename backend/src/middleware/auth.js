@@ -95,12 +95,15 @@ const authenticateToken = async (req, res, next) => {
 /**
  * Middleware pour vérifier le rôle admin
  */
-const requireAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+// Reserve au compte plateforme: valide les retraits, voit tous les
+// promoteurs. 'admin' designe desormais un promoteur ordinaire, proprietaire
+// de ses propres zones - il ne doit surtout pas passer ce controle.
+const requireSuperAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'super_admin') {
     next();
   } else {
-    return res.status(403).json({ 
-      error: 'Access denied. Admin role required.' 
+    return res.status(403).json({
+      error: 'Access denied. Super admin role required.'
     });
   }
 };
@@ -146,6 +149,6 @@ const authenticateSupabase = async (req, res, next) => {
 module.exports = {
   authenticateToken,
   authenticateSupabase,
-  requireAdmin
+  requireSuperAdmin
 };
 
