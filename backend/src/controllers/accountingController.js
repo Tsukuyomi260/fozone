@@ -6,8 +6,10 @@
 const { supabaseAdmin } = require('../config/database');
 const logger = require('../config/logger');
 
-// Le taux est partage avec le dashboard: une seule source de verite
-const { COMMISSION_RATE, commissionOn, netAmount } = require('../config/commission');
+// Le promoteur ne supporte qu'un seul prelevement: les 5 % de la plateforme.
+// La commission agregateur est un cout de Fo-Zone, incluse dans ces 5 %,
+// jamais deduite en plus au promoteur.
+const { PLATFORM_FEE_RATE } = require('../config/platformCommission');
 
 /**
  * Récupère les statistiques de paiements par période (pour graphiques)
@@ -56,7 +58,7 @@ async function getPaymentStats(req, res, next) {
     // Récupérer les paiements
     const { data: payments } = await supabaseAdmin
       .from('payments')
-      .select('amount, completed_at')
+      .select('amount, net_to_tenant, completed_at')
       .in('wifi_zone_id', zoneIds)
       .eq('status', 'completed')
       .gte('completed_at', startDate.toISOString())
@@ -74,10 +76,9 @@ async function getPaymentStats(req, res, next) {
       if (!dailyStats[dayKey]) {
         dailyStats[dayKey] = { revenue: 0, count: 0 };
       }
-      // Ventes nettes: ce que le gerant touche, commission agregateur deduite.
-      // Le net est calcule paiement par paiement, comme dans le tableau, pour que
-      // le graphique et l'historique affichent exactement les memes chiffres.
-      dailyStats[dayKey].revenue += netAmount(payment.amount);
+      // Ventes nettes: montant fige a la vente (migration 010), jamais
+      // recalcule. Un changement de taux ne doit pas reecrire l'historique.
+      dailyStats[dayKey].revenue += parseFloat(payment.net_to_tenant || 0);
       dailyStats[dayKey].count += 1;
     });
 
@@ -310,13 +311,14 @@ async function getPaymentHistory(req, res, next) {
     // Calculer les commissions et revenus
     const paymentsWithCommission = payments?.map(payment => {
       const amount = parseFloat(payment.amount || 0);
-      // Le XOF n'a pas de subdivision: l'agregateur facture en francs entiers.
-      const commission = commissionOn(amount);
-      const revenue = amount - commission;
+      // Montants figes a la vente (migration 010); le backfill couvre les
+      // paiements anterieurs, la colonne est donc toujours renseignee.
+      const commission = parseFloat(payment.platform_fee || 0);
+      const revenue = parseFloat(payment.net_to_tenant || 0);
 
       return {
         ...payment,
-        commission_rate: COMMISSION_RATE * 100,
+        commission_rate: PLATFORM_FEE_RATE * 100,
         commission: commission,
         revenue: revenue,
         pricing_amount: payment.pricings?.amount || amount,
@@ -444,9 +446,9 @@ async function exportPaymentHistoryCSV(req, res, next) {
 
     const rows = payments?.map(payment => {
       const amount = parseFloat(payment.amount || 0);
-      // Le XOF n'a pas de subdivision: l'agregateur facture en francs entiers.
-      const commission = commissionOn(amount);
-      const revenue = amount - commission;
+      // Montants figes a la vente, comme dans l'historique JSON.
+      const commission = parseFloat(payment.platform_fee || 0);
+      const revenue = parseFloat(payment.net_to_tenant || 0);
       const pricingAmount = payment.pricings?.amount || amount;
       const date = new Date(payment.completed_at).toLocaleString('fr-FR');
 
@@ -454,7 +456,7 @@ async function exportPaymentHistoryCSV(req, res, next) {
         payment.wifi_zones?.name || 'N/A',
         `${pricingAmount} XOF`,
         `${revenue.toFixed(2)} XOF`,
-        `${parseFloat((COMMISSION_RATE * 100).toFixed(1))} %`,
+        `${commission.toFixed(2)} XOF`,
         payment.moneroo_payment_id || 'N/A',
         date,
         'MTN MoMo Benin',

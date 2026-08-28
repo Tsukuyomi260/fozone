@@ -5,7 +5,9 @@
 
 const { supabaseAdmin } = require('../config/database');
 const logger = require('../config/logger');
-const { netAmount } = require('../config/commission');
+// Le net promoteur est fige sur chaque paiement (migration 010): on le lit,
+// on ne le recalcule pas. Recalculer ferait bouger l'historique le jour ou
+// le taux change.
 
 /**
  * Récupère les statistiques globales pour toutes les zones de l'utilisateur
@@ -51,7 +53,7 @@ async function getGlobalStats(req, res, next) {
     // Recettes du jour
     const { data: todayRevenueData } = await supabaseAdmin
       .from('payments')
-      .select('amount')
+      .select('amount, net_to_tenant')
       .in('wifi_zone_id', zoneIds)
       .eq('status', 'completed')
       .gte('completed_at', todayISO);
@@ -88,7 +90,10 @@ async function getGlobalStats(req, res, next) {
         total_tickets_sold: totalTicketsSold || 0,
         today_revenue: today_revenue,
         // Ce que le gerant touche reellement, commission agregateur deduite
-        today_revenue_net: netAmount(today_revenue),
+        // Somme des nets figes, ligne par ligne: identique au calcul de la
+        // comptabilite. L'ancienne version arrondissait la somme du jour, ce
+        // qui divergeait de l'addition des lignes affichees au promoteur.
+        today_revenue_net: (todayRevenueData || []).reduce((s, p) => s + parseFloat(p.net_to_tenant || 0), 0),
         today_tickets_sold: todayTicketsSold || 0,
         total_zones: zoneIds.length,
         active_zones: activeZoneIds.length
