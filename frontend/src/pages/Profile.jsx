@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { User, Edit3, Lock, Shield, Save, X, Eye, EyeOff } from 'lucide-react';
+import { User, Edit3, Lock, Shield, Save, X, Eye, EyeOff, Users, Trash2, UserPlus } from 'lucide-react';
 import { getProfile, updateProfile, changePassword } from '../services/profile';
+import { getTeam, addMember, removeMember } from '../services/team';
 import { getCurrentUser } from '../services/auth';
 import toast from 'react-hot-toast';
 import { Skeleton, SkeletonCard } from '../components/Skeleton';
@@ -29,6 +30,72 @@ export default function Profile() {
     new_password: '',
     confirm_password: ''
   });
+
+  // État pour l'équipe: comptes partageant les mêmes données
+  const [team, setTeam] = useState([]);
+  const [canManageTeam, setCanManageTeam] = useState(true);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
+  const [memberForm, setMemberForm] = useState({
+    email: '',
+    password: '',
+    full_name: ''
+  });
+
+  const loadTeam = async () => {
+    try {
+      setTeamLoading(true);
+      const response = await getTeam();
+      setTeam(response.members || []);
+      setCanManageTeam(response.can_manage);
+    } catch (error) {
+      console.error('[Profile] Erreur équipe:', error);
+      toast.error(error.message || "Impossible de charger l'équipe");
+    } finally {
+      setTeamLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'team') loadTeam();
+  }, [activeTab]);
+
+  const handleAddMember = async (e) => {
+    e.preventDefault();
+    try {
+      setAddingMember(true);
+      const response = await addMember(
+        memberForm.email,
+        memberForm.password,
+        memberForm.full_name
+      );
+      toast.success(response.message);
+      setMemberForm({ email: '', password: '', full_name: '' });
+      loadTeam();
+    } catch (error) {
+      toast.error(error.message || "Impossible d'ajouter ce membre");
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  const handleRemoveMember = async (member) => {
+    if (
+      !window.confirm(
+        `Retirer l'accès de ${member.email} ? Son compte restera, mais il ne verra plus vos données.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await removeMember(member.membership_id);
+      toast.success(response.message);
+      loadTeam();
+    } catch (error) {
+      toast.error(error.message || 'Opération impossible');
+    }
+  };
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
@@ -134,6 +201,7 @@ export default function Profile() {
     { id: 'overview', label: 'Aperçu', icon: User },
     { id: 'edit', label: 'Éditer le Profil', icon: Edit3 },
     { id: 'password', label: 'Changer le Mot de Passe', icon: Lock },
+    { id: 'team', label: 'Équipe', icon: Users },
     { id: 'security', label: 'Sécurité 2FA', icon: Shield }
   ];
 
@@ -494,6 +562,161 @@ export default function Profile() {
                 </button>
               </div>
             </form>
+          )}
+
+          {/* Onglet Équipe */}
+          {activeTab === 'team' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">
+                  Équipe
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Les personnes ajoutées ici travaillent sur vos zones, vos tickets et
+                  votre comptabilité, avec leur propre identifiant. Le solde est commun.
+                </p>
+              </div>
+
+              {!canManageTeam && (
+                <div className="rounded-xl bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 p-4">
+                  <p className="text-sm text-amber-800 dark:text-amber-300">
+                    Vous avez accès à ce compte en tant que membre. Seul le propriétaire
+                    peut gérer l'équipe.
+                  </p>
+                </div>
+              )}
+
+              {/* Formulaire d'ajout */}
+              {canManageTeam && (
+                <form onSubmit={handleAddMember} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={memberForm.email}
+                        onChange={(e) =>
+                          setMemberForm({ ...memberForm, email: e.target.value })
+                        }
+                        placeholder="associe@email.com"
+                        className="w-full h-11 px-3.5 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/15 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+                        Nom complet
+                      </label>
+                      <input
+                        type="text"
+                        value={memberForm.full_name}
+                        onChange={(e) =>
+                          setMemberForm({ ...memberForm, full_name: e.target.value })
+                        }
+                        placeholder="Nom de votre associé"
+                        className="w-full h-11 px-3.5 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/15 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+                      Mot de passe
+                    </label>
+                    <input
+                      type="password"
+                      value={memberForm.password}
+                      onChange={(e) =>
+                        setMemberForm({ ...memberForm, password: e.target.value })
+                      }
+                      placeholder="Au moins 6 caractères"
+                      className="w-full h-11 px-3.5 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/15 transition-colors"
+                    />
+                    <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      Nécessaire uniquement si la personne n'a pas encore de compte
+                      Fô-Zône. Communiquez-le-lui, il pourra le changer ensuite.
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={addingMember}
+                    className="inline-flex items-center justify-center gap-2 h-11 px-5 text-sm font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] rounded-xl shadow-lg shadow-lime-400/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {addingMember ? (
+                      <>
+                        <span className="h-4 w-4 rounded-full border-2 border-[#0A1005]/30 border-t-[#0A1005] animate-spin" />
+                        Ajout...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus size={16} strokeWidth={2.5} />
+                        Donner l'accès
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+
+              {/* Liste des membres */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">
+                  {team.length === 0
+                    ? 'Aucun membre'
+                    : `${team.length} membre${team.length > 1 ? 's' : ''}`}
+                </p>
+
+                {teamLoading ? (
+                  <Skeleton className="h-16 w-full rounded-xl" />
+                ) : team.length === 0 ? (
+                  <div className="text-center py-8 rounded-xl border border-dashed border-gray-200 dark:border-white/10">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-lime-50 dark:bg-lime-400/10 mb-3">
+                      <Users className="text-lime-600 dark:text-lime-400" size={22} strokeWidth={2} />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Vous êtes seul sur ce compte
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100 dark:divide-white/5">
+                    {team.map((member) => (
+                      <div
+                        key={member.membership_id}
+                        className="flex items-center justify-between gap-3 py-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-full bg-lime-400 flex items-center justify-center flex-shrink-0 text-[#0A1005] font-bold text-xs">
+                            {(member.full_name || member.email || 'U')
+                              .trim()
+                              .charAt(0)
+                              .toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                              {member.full_name || member.email?.split('@')[0]}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              {member.email}
+                            </p>
+                          </div>
+                        </div>
+                        {canManageTeam && (
+                          <button
+                            onClick={() => handleRemoveMember(member)}
+                            className="p-2 rounded-lg text-gray-400 dark:text-gray-600 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex-shrink-0"
+                            title="Retirer l'accès"
+                          >
+                            <Trash2 size={16} strokeWidth={2} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {/* Onglet Sécurité 2FA */}

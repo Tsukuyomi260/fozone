@@ -14,7 +14,7 @@ const logger = require('../config/logger');
  */
 async function getGlobalStats(req, res, next) {
   try {
-    const userId = req.user.id;
+    const userId = req.user.ownerId;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
@@ -119,7 +119,7 @@ async function getZoneStats(req, res, next) {
       .from('wifi_zones')
       .select('id, name')
       .eq('id', zoneId)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .single();
 
     if (!zone) {
@@ -204,7 +204,7 @@ async function getStatsByPeriod(req, res, next) {
       .from('wifi_zones')
       .select('id')
       .eq('id', zoneId)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .single();
 
     if (!zone) {

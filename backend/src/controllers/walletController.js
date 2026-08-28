@@ -12,7 +12,7 @@ const logger = require('../config/logger');
  */
 async function getWalletBalance(req, res, next) {
   try {
-    const balance = await getBalance(req.user.id);
+    const balance = await getBalance(req.user.ownerId);
     res.json({ balance });
   } catch (error) {
     logger.error('Error computing balance:', { userId: req.user.id, error: error.message });
@@ -28,7 +28,7 @@ async function getMyWithdrawals(req, res, next) {
     const { data: withdrawals, error } = await supabaseAdmin
       .from('withdrawals')
       .select('id, amount, status, payout_phone, requested_at, processed_at, note')
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .order('requested_at', { ascending: false });
 
     if (error) {
@@ -55,7 +55,7 @@ async function requestWithdrawal(req, res, next) {
 
     // Le solde est recalcule ici, jamais lu depuis le client: une demande
     // ne peut pas depasser ce que le promoteur a reellement gagne.
-    const balance = await getBalance(req.user.id);
+    const balance = await getBalance(req.user.ownerId);
 
     if (requested > balance.available) {
       return res.status(400).json({
@@ -70,7 +70,7 @@ async function requestWithdrawal(req, res, next) {
     const { data: existing } = await supabaseAdmin
       .from('withdrawals')
       .select('id')
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .eq('status', 'pending')
       .limit(1);
 
@@ -86,7 +86,7 @@ async function requestWithdrawal(req, res, next) {
     const { data: withdrawal, error } = await supabaseAdmin
       .from('withdrawals')
       .insert({
-        owner_id: req.user.id,
+        owner_id: req.user.ownerId,
         amount: requested,
         payout_phone: phone,
         status: 'pending'

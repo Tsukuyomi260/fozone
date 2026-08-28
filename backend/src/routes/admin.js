@@ -17,6 +17,13 @@ const idValidation = [param('id').isUUID()];
 const noteValidation = [body('note').optional().trim().isLength({ max: 500 })];
 
 router.get('/tenants', adminController.getTenants);
+router.put(
+  '/tenants/:id/active',
+  idValidation,
+  [body('is_active').isBoolean()],
+  validate,
+  adminController.setTenantActive
+);
 router.get('/withdrawals', adminController.getWithdrawals);
 
 router.put('/withdrawals/:id/approve', idValidation, noteValidation, validate, adminController.approveWithdrawal);

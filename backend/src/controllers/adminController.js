@@ -14,12 +14,27 @@ const logger = require('../config/logger');
  */
 async function getTenants(req, res, next) {
   try {
+    // Les membres d'equipe ne sont pas des promoteurs: ils partagent les
+    // donnees de celui qui les a invites. Les lister ici les ferait
+    // apparaitre comme de faux tenants a zero zone et zero vente.
+    const { data: memberships } = await supabaseAdmin
+      .from('team_members')
+      .select('member_id');
+
+    const memberIds = (memberships || []).map((m) => m.member_id);
+
     // Le super-admin lui-meme n'est pas un promoteur: il n'a ni zone ni solde
-    const { data: users, error: usersError } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('users')
       .select('id, email, full_name, phone, role, is_active, created_at')
       .neq('role', 'super_admin')
       .order('created_at', { ascending: false });
+
+    if (memberIds.length > 0) {
+      query = query.not('id', 'in', `(${memberIds.join(',')})`);
+    }
+
+    const { data: users, error: usersError } = await query;
 
     if (usersError) {
       logger.error('Error loading tenants:', usersError);
@@ -178,8 +193,65 @@ function transition(targetStatus, allowedFrom, successMessage) {
   };
 }
 
+/**
+ * Active ou desactive un compte promoteur.
+ * Un compte inactif ne peut ni se connecter ni vendre: le middleware le
+ * rejette a chaque requete, et son jeton eventuel devient inutilisable.
+ */
+async function setTenantActive(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+
+    const { data: target, error: loadError } = await supabaseAdmin
+      .from('users')
+      .select('id, email, role')
+      .eq('id', id)
+      .single();
+
+    if (loadError || !target) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+
+    // Garde-fou: la plateforme ne doit pas pouvoir se desactiver elle-meme
+    // et se verrouiller dehors.
+    if (target.role === 'super_admin') {
+      return res.status(400).json({
+        error: 'Impossible de modifier un compte plateforme'
+      });
+    }
+
+    const { data: updated, error } = await supabaseAdmin
+      .from('users')
+      .update({ is_active: Boolean(is_active) })
+      .eq('id', id)
+      .select('id, email, full_name, role, is_active')
+      .single();
+
+    if (error) {
+      logger.error('Error updating tenant:', error);
+      return res.status(400).json({
+        error: 'Failed to update tenant',
+        details: error.message
+      });
+    }
+
+    logger.info(
+      `Tenant ${target.email} ${is_active ? 'activated' : 'deactivated'} by ${req.user.id}`
+    );
+
+    res.json({
+      message: is_active ? 'Promoteur activé' : 'Promoteur désactivé',
+      tenant: updated
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getTenants,
+  setTenantActive,
   getWithdrawals,
   approveWithdrawal: transition('approved', ['pending'], 'Retrait validé'),
   markWithdrawalPaid: transition('paid', ['approved'], 'Retrait marqué comme payé'),

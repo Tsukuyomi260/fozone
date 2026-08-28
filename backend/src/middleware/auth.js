@@ -82,7 +82,21 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
+    // Proprietaire effectif: le compte dont on manipule les donnees.
+    // Soi-meme pour un promoteur, l'inviteur pour un membre d'equipe.
+    //
+    // Resolu a chaque requete, jamais mis dans le jeton: une invitation peut
+    // etre revoquee, et un jeton de 7 jours continuerait d'ouvrir l'acces.
+    const { data: membership } = await supabaseAdmin
+      .from('team_members')
+      .select('owner_id')
+      .eq('member_id', user.id)
+      .maybeSingle();
+
     req.user = user;
+    req.user.ownerId = membership?.owner_id || user.id;
+    req.user.isMember = Boolean(membership);
+
     next();
   } catch (error) {
     logger.error('Authentication error:', error);

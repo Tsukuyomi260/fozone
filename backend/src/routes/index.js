@@ -16,6 +16,7 @@ const dashboardRoutes = require('./dashboard');
 const accountingRoutes = require('./accounting');
 const walletRoutes = require('./wallet');
 const adminRoutes = require('./admin');
+const teamRoutes = require('./team');
 
 // Montage des routes
 router.use('/auth', authRoutes);
@@ -27,6 +28,7 @@ router.use('/dashboard', dashboardRoutes);
 router.use('/accounting', accountingRoutes);
 router.use('/wallet', walletRoutes);
 router.use('/admin', adminRoutes);
+router.use('/team', teamRoutes);
 
 // Route de santé de l'API
 router.get('/health', (req, res) => {

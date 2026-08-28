@@ -21,7 +21,7 @@ async function getTicketsByZone(req, res, next) {
       .from('wifi_zones')
       .select('id')
       .eq('id', zoneId)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .single();
 
     if (!zone) {
@@ -121,7 +121,7 @@ async function importTickets(req, res, next) {
       .from('wifi_zones')
       .select('id')
       .eq('id', zoneId)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .single();
 
     if (!zone) {
@@ -237,7 +237,7 @@ async function getTicketStats(req, res, next) {
       .from('wifi_zones')
       .select('id')
       .eq('id', zoneId)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .single();
 
     if (!zone) {
@@ -281,7 +281,7 @@ async function deleteTicket(req, res, next) {
       .from('wifi_zones')
       .select('id, owner_id')
       .eq('id', ticket.wifi_zone_id)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .single();
 
     if (zoneError || !zone) {
@@ -323,7 +323,7 @@ async function deleteAllTickets(req, res, next) {
       .from('wifi_zones')
       .select('id')
       .eq('id', zoneId)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .single();
 
     if (!zone) {

@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, Menu, X, Wifi, Home, DollarSign, Ticket, FileText, LogOut, Settings, Search, X as XIcon, ChevronLeft, Wallet } from 'lucide-react';
+import { Moon, Sun, Menu, X, Wifi, Home, DollarSign, Ticket, FileText, LogOut, Settings, Search, X as XIcon, ChevronLeft, ChevronDown, Wallet } from 'lucide-react';
 import { logout, getCurrentUser } from '../services/auth';
 import Logo from './Logo';
 
@@ -15,6 +15,15 @@ export default function Layout() {
   });
   const [user, setUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  // Sections dépliées. Une section absente de l'objet est considérée
+  // ouverte: par défaut tout est visible, seul un repli explicite est mémorisé.
+  const [openSections, setOpenSections] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('openSections') || '{}');
+    } catch {
+      return {};
+    }
+  });
   const searchInputRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -39,6 +48,14 @@ export default function Layout() {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const toggleSection = (label) => {
+    setOpenSections((prev) => {
+      const next = { ...prev, [label]: prev[label] === false };
+      localStorage.setItem('openSections', JSON.stringify(next));
+      return next;
+    });
   };
 
   const toggleSidebar = () => {
@@ -119,13 +136,32 @@ export default function Layout() {
     },
   ];
 
+  // Une section repliée qui contient la page courante se rouvre: sinon
+  // l'entrée active resterait invisible après une navigation par la
+  // recherche ou un lien direct.
+  useEffect(() => {
+    const section = menuSections.find((s) =>
+      s.items.some((item) => item.path === location.pathname)
+    );
+    if (section && openSections[section.label] === false) {
+      setOpenSections((prev) => {
+        const next = { ...prev, [section.label]: true };
+        localStorage.setItem('openSections', JSON.stringify(next));
+        return next;
+      });
+    }
+  }, [location.pathname]);
+
   const navLinkClass = (isActive, collapsed) =>
     `flex items-center rounded-xl transition-colors duration-150 group relative ${
       collapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2.5'
     } ${
       isActive
         ? 'bg-lime-400 text-[#0A1005] font-semibold shadow-lg shadow-lime-400/20'
-        : 'text-gray-600 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/[0.04] hover:text-gray-900 dark:hover:text-gray-200'
+        // Survol remonté: les entrées reposent maintenant sur une carte à
+        // white/[0.03]. Un survol à [0.04] ne creuserait qu'un écart de 1 %,
+        // invisible à l'œil.
+        : 'text-gray-600 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-gray-200'
     }`;
 
   const iconBtn =
@@ -179,19 +215,51 @@ export default function Layout() {
     </form>
   );
 
-  /* --- Navigation --- */
+  /* --- Navigation, sections dépliables --- */
   const Nav = ({ collapsed = false, onNavigate }) => (
-    <nav className="flex-1 px-3 py-4 overflow-y-auto">
-      {menuSections.map((section) => (
-        <div key={section.label} className="mb-5">
+    <nav className="flex-1 px-3 py-4 overflow-y-auto no-scrollbar">
+      {menuSections.map((section) => {
+        // En mode réduit il n'y a plus de libellé sur quoi cliquer: on
+        // affiche toujours les icônes, sinon la navigation deviendrait
+        // inaccessible.
+        const isOpen = collapsed || openSections[section.label] !== false;
+
+        return (
+        <div
+          key={section.label}
+          // Pas de overflow-hidden ici: l'infobulle du mode réduit sort
+          // volontairement du conteneur (left-full) et serait découpée.
+          className={
+            collapsed
+              ? 'mb-5'
+              : 'mb-2 rounded-xl bg-gray-50 dark:bg-white/[0.03] px-2 pt-2 pb-2'
+          }
+        >
           {collapsed ? (
             <div className="mx-auto mb-3 h-px w-6 bg-gray-200 dark:bg-white/[0.06]" />
           ) : (
-            <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-700">
-              {section.label}
-            </p>
+            <button
+              type="button"
+              onClick={() => toggleSection(section.label)}
+              className={`w-full flex items-center justify-between px-1.5 group/section ${
+                isOpen ? 'mb-2' : ''
+              }`}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-600 group-hover/section:text-gray-600 dark:group-hover/section:text-gray-400 transition-colors">
+                {section.label}
+              </span>
+              <ChevronDown
+                size={13}
+                strokeWidth={2.5}
+                className={`text-gray-300 dark:text-gray-600 group-hover/section:text-gray-500 transition-transform duration-200 ${
+                  isOpen ? '' : '-rotate-90'
+                }`}
+              />
+            </button>
           )}
-          <div className="space-y-1">
+          <div className={`space-y-1 overflow-hidden transition-all duration-200 ${
+            isOpen ? 'opacity-100' : 'max-h-0 opacity-0'
+          }`}>
             {section.items.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -219,7 +287,8 @@ export default function Layout() {
             })}
           </div>
         </div>
-      ))}
+        );
+      })}
     </nav>
   );
 

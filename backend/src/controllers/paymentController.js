@@ -537,7 +537,7 @@ async function getPaymentsByZone(req, res, next) {
       .from('wifi_zones')
       .select('id')
       .eq('id', zoneId)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .single();
 
     if (!zone) {

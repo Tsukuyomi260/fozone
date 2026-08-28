@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Users, Wifi } from 'lucide-react';
-import { getTenants } from '../../services/admin';
+import { getTenants, setTenantActive } from '../../services/admin';
 import { SkeletonHeader, SkeletonTable } from '../../components/Skeleton';
 
 export default function AdminTenants() {
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState(null);
 
   useEffect(() => {
     loadTenants();
@@ -21,6 +22,26 @@ export default function AdminTenants() {
       toast.error(error.message || 'Impossible de charger les promoteurs');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleActive = async (tenant) => {
+    const next = !tenant.is_active;
+    const message = next
+      ? `Activer ${tenant.email} ? Il pourra créer des zones et vendre des tickets.`
+      : `Désactiver ${tenant.email} ? Il ne pourra plus se connecter ni vendre.`;
+
+    if (!window.confirm(message)) return;
+
+    setActing(tenant.id);
+    try {
+      const response = await setTenantActive(tenant.id, next);
+      toast.success(response.message);
+      loadTenants();
+    } catch (error) {
+      toast.error(error.message || 'Opération impossible');
+    } finally {
+      setActing(null);
     }
   };
 
@@ -150,15 +171,28 @@ export default function AdminTenants() {
                       {(t.balance?.available || 0).toLocaleString()} XOF
                     </td>
                     <td className={td}>
-                      <span
-                        className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                          t.is_active
-                            ? 'bg-lime-50 dark:bg-lime-400/10 text-lime-700 dark:text-lime-400'
-                            : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400'
-                        }`}
-                      >
-                        {t.is_active ? 'Actif' : 'Désactivé'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                            t.is_active
+                              ? 'bg-lime-50 dark:bg-lime-400/10 text-lime-700 dark:text-lime-400'
+                              : 'bg-amber-50 dark:bg-amber-400/10 text-amber-700 dark:text-amber-400'
+                          }`}
+                        >
+                          {t.is_active ? 'Actif' : 'En attente'}
+                        </span>
+                        <button
+                          disabled={acting === t.id}
+                          onClick={() => toggleActive(t)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-50 ${
+                            t.is_active
+                              ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10'
+                              : 'bg-lime-400 hover:bg-lime-300 text-[#0A1005]'
+                          }`}
+                        >
+                          {t.is_active ? 'Désactiver' : 'Activer'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

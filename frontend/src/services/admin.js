@@ -12,6 +12,14 @@ export async function getTenants() {
 }
 
 /**
+ * Active ou désactive un promoteur. Un compte inactif ne peut ni se
+ * connecter ni vendre.
+ */
+export async function setTenantActive(id, isActive) {
+  return api.put(`/admin/tenants/${id}/active`, { is_active: isActive });
+}
+
+/**
  * Demandes de retrait, optionnellement filtrées par statut
  */
 export async function getWithdrawals(status) {

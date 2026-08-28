@@ -58,7 +58,7 @@ async function getPricingsByZone(req, res, next) {
       .from('wifi_zones')
       .select('id')
       .eq('id', zoneId)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .single();
 
     if (!zone) {
@@ -131,7 +131,7 @@ async function createPricing(req, res, next) {
       .from('wifi_zones')
       .select('id')
       .eq('id', zoneId)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .single();
 
     if (!zone) {
@@ -244,7 +244,7 @@ async function updatePricing(req, res, next) {
       .eq('id', id)
       .single();
 
-    if (!pricing || pricing.wifi_zones.owner_id !== req.user.id) {
+    if (!pricing || pricing.wifi_zones.owner_id !== req.user.ownerId) {
       return res.status(404).json({
         error: 'Pricing not found'
       });
@@ -309,7 +309,7 @@ async function deletePricing(req, res, next) {
       .eq('id', id)
       .single();
 
-    if (!pricing || pricing.wifi_zones.owner_id !== req.user.id) {
+    if (!pricing || pricing.wifi_zones.owner_id !== req.user.ownerId) {
       return res.status(404).json({
         error: 'Pricing not found'
       });

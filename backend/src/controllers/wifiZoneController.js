@@ -14,7 +14,7 @@ async function getAllZones(req, res, next) {
     const { data: zones, error } = await supabaseAdmin
       .from('wifi_zones')
       .select('*')
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -68,7 +68,7 @@ async function getZoneById(req, res, next) {
       .from('wifi_zones')
       .select('*')
       .eq('id', id)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .single();
 
     if (error || !zone) {
@@ -101,7 +101,7 @@ async function createZone(req, res, next) {
         latitude: latitude || null,
         longitude: longitude || null,
         address: address || null,
-        owner_id: req.user.id
+        owner_id: req.user.ownerId
       })
       .select()
       .single();
@@ -138,7 +138,7 @@ async function updateZone(req, res, next) {
       .from('wifi_zones')
       .select('id')
       .eq('id', id)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .single();
 
     if (!existingZone) {
@@ -192,7 +192,7 @@ async function deleteZone(req, res, next) {
       .from('wifi_zones')
       .select('id')
       .eq('id', id)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.ownerId)
       .single();
 
     if (!existingZone) {

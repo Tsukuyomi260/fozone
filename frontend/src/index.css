@@ -100,3 +100,17 @@
   }
 }
 
+
+@layer utilities {
+  /* Masque la barre de defilement sans desactiver le defilement lui-meme:
+     retirer overflow-y-auto ferait deborder le menu sur un ecran court et
+     rendrait les dernieres entrees inatteignables. */
+  .no-scrollbar {
+    scrollbar-width: none;        /* Firefox */
+    -ms-overflow-style: none;     /* Edge ancien */
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;                /* Chrome, Safari */
+  }
+}

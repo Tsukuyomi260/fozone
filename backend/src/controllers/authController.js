@@ -53,8 +53,11 @@ async function register(req, res, next) {
         email: email,
         password_hash: hashedPassword,
         full_name: full_name || null,
-        role: 'admin', // Par défaut admin pour le MVP
-        is_active: true
+        role: 'admin', // Tout nouveau compte est un promoteur
+        // Inactif tant que le super-admin ne l'a pas approuve: la plateforme
+        // detient les fonds encaisses, on ne laisse pas un inconnu vendre
+        // avant verification.
+        is_active: false
       })
       .select()
       .single();
@@ -66,24 +69,20 @@ async function register(req, res, next) {
       });
     }
 
-    // Générer le token JWT
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-    );
-
-    logger.info(`New user registered: ${user.email}`);
+    // Aucun jeton n'est delivre: le compte est inactif, le middleware le
+    // rejetterait a la premiere requete. Mieux vaut un message clair qu'une
+    // session qui echoue partout.
+    logger.info(`New user registered, pending approval: ${user.email}`);
 
     res.status(201).json({
-      message: 'User registered successfully',
+      message: 'Compte créé. Il sera actif après validation par Fô-Zône.',
+      pending_approval: true,
       user: {
         id: user.id,
         email: user.email,
         full_name: user.full_name,
         role: user.role
-      },
-      token: token
+      }
     });
   } catch (error) {
     next(error);
@@ -112,7 +111,7 @@ async function login(req, res, next) {
 
     if (!user.is_active) {
       return res.status(403).json({
-        error: 'Account is deactivated'
+        error: 'Votre compte est en attente de validation par Fô-Zône.'
       });
     }
 

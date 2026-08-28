@@ -16,7 +16,7 @@ const { PLATFORM_FEE_RATE } = require('../config/platformCommission');
  */
 async function getPaymentStats(req, res, next) {
   try {
-    const userId = req.user.id;
+    const userId = req.user.ownerId;
     const { year, month, period = 'days' } = req.query; // period: 'days', 'weeks', 'months'
 
     // Récupérer toutes les zones de l'utilisateur
@@ -99,7 +99,7 @@ async function getPaymentStats(req, res, next) {
  */
 async function getTicketsSoldStats(req, res, next) {
   try {
-    const userId = req.user.id;
+    const userId = req.user.ownerId;
     const { month, period = 'days' } = req.query;
 
     // Récupérer toutes les zones de l'utilisateur
@@ -168,7 +168,7 @@ async function getTicketsSoldStats(req, res, next) {
  */
 async function getPaymentHistory(req, res, next) {
   try {
-    const userId = req.user.id;
+    const userId = req.user.ownerId;
     const { 
       startDate, 
       endDate, 
@@ -349,7 +349,7 @@ async function getPaymentHistory(req, res, next) {
  */
 async function exportPaymentHistoryCSV(req, res, next) {
   try {
-    const userId = req.user.id;
+    const userId = req.user.ownerId;
     const { startDate, endDate, zoneId } = req.query;
 
     // Récupérer toutes les zones de l'utilisateur

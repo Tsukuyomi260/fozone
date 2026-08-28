@@ -52,29 +52,36 @@ export default function AdminLayout() {
     `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors duration-150 ${
       isActive
         ? 'bg-lime-400 text-[#0A1005] font-semibold shadow-lg shadow-lime-400/20'
-        : 'text-gray-600 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/[0.04] hover:text-gray-900 dark:hover:text-gray-200'
+        // Survol remonté: les entrées reposent sur une carte à white/[0.03]
+        : 'text-gray-600 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-gray-200'
     }`;
 
   const iconBtn =
     'p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white transition-colors duration-150';
 
   const Nav = ({ onNavigate }) => (
-    <nav className="flex-1 px-3 py-4 space-y-1">
-      <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-700">
-        Plateforme
-      </p>
-      {menuItems.map((item) => {
-        const Icon = item.icon;
-        const isActive = item.end
-          ? location.pathname === item.path
-          : location.pathname.startsWith(item.path);
-        return (
-          <Link key={item.path} to={item.path} className={navLinkClass(isActive)} onClick={onNavigate}>
-            <Icon size={18} strokeWidth={2.2} />
-            {item.label}
-          </Link>
-        );
-      })}
+    <nav className="flex-1 px-3 py-4 overflow-y-auto no-scrollbar">
+      {/* Meme mini-carte que la sidebar promoteur, pour que les deux
+          espaces se ressemblent. Pas de repli ici: une seule section. */}
+      <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] p-2">
+        <p className="px-1.5 mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-600">
+          Plateforme
+        </p>
+        <div className="space-y-1">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.end
+              ? location.pathname === item.path
+              : location.pathname.startsWith(item.path);
+            return (
+              <Link key={item.path} to={item.path} className={navLinkClass(isActive)} onClick={onNavigate}>
+                <Icon size={18} strokeWidth={2.2} />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
     </nav>
   );
 
