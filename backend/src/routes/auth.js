@@ -10,16 +10,34 @@ const { authenticateToken } = require('../middleware/auth');
 const validate = require('../middleware/validator');
 
 // Validation pour l'inscription
+// Chaque regle porte son message: le client n'affiche que le premier, il doit
+// donc dire quel champ corriger. Un " Validation failed " brut ne renseigne
+// personne et laisse l'inscrit devant un mur.
 const registerValidation = [
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
-  body('full_name').optional().trim().isLength({ min: 2 })
+  // trim avant isEmail: une adresse copiee-collee traine souvent une espace,
+  // et isEmail la refuse sans rien expliquer.
+  body('email')
+    .trim()
+    .isEmail().withMessage('Adresse e-mail invalide')
+    .normalizeEmail(),
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Le mot de passe doit contenir au moins 6 caractères'),
+  // checkFalsy: un nom laisse vide est un champ absent, pas un champ invalide
+  body('full_name')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ min: 2 })
+    .withMessage('Le nom doit contenir au moins 2 caractères')
 ];
 
 // Validation pour la connexion
 const loginValidation = [
-  body('email').isEmail().normalizeEmail(),
-  body('password').notEmpty()
+  body('email')
+    .trim()
+    .isEmail().withMessage('Adresse e-mail invalide')
+    .normalizeEmail(),
+  body('password').notEmpty().withMessage('Mot de passe requis')
 ];
 
 router.post('/register', registerValidation, validate, authController.register);

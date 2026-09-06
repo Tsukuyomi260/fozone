@@ -26,7 +26,7 @@ async function getTenants(req, res, next) {
     // Le super-admin lui-meme n'est pas un promoteur: il n'a ni zone ni solde
     let query = supabaseAdmin
       .from('users')
-      .select('id, email, full_name, phone, role, is_active, created_at')
+      .select('id, email, full_name, phone, role, is_active, created_at, kyc_status, email_verified_at')
       .neq('role', 'super_admin')
       .order('created_at', { ascending: false });
 
@@ -152,6 +152,21 @@ function transition(targetStatus, allowedFrom, successMessage) {
       // A la validation seulement: le solde a pu bouger depuis la demande
       // (autre retrait valide entre-temps). On revalide avant d'engager.
       if (targetStatus === 'approved') {
+        // Re-controle du KYC au moment de valider: le statut a pu etre
+        // revoque depuis la demande, comme le solde a pu bouger.
+        const { data: owner } = await supabaseAdmin
+          .from('users')
+          .select('kyc_status')
+          .eq('id', withdrawal.owner_id)
+          .single();
+
+        if (owner?.kyc_status !== 'approved') {
+          return res.status(400).json({
+            error: "Ce promoteur n'a pas d'identité vérifiée",
+            kyc_status: owner?.kyc_status || 'none'
+          });
+        }
+
         const balance = await getBalance(withdrawal.owner_id);
         if (parseFloat(withdrawal.amount) > balance.available) {
           return res.status(400).json({
@@ -249,9 +264,69 @@ async function setTenantActive(req, res, next) {
   }
 }
 
+/**
+ * Valide ou refuse l'identite d'un promoteur.
+ * C'est ce statut qui autorise le retrait des fonds.
+ */
+async function setTenantKyc(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { kyc_status, note } = req.body;
+
+    const { data: target, error: loadError } = await supabaseAdmin
+      .from('users')
+      .select('id, email, role')
+      .eq('id', id)
+      .single();
+
+    if (loadError || !target) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+
+    if (target.role === 'super_admin') {
+      return res.status(400).json({
+        error: 'Impossible de modifier un compte plateforme'
+      });
+    }
+
+    const { data: updated, error } = await supabaseAdmin
+      .from('users')
+      .update({
+        kyc_status,
+        kyc_reviewed_at: new Date().toISOString(),
+        kyc_reviewed_by: req.user.id,
+        ...(note !== undefined ? { kyc_note: note } : {})
+      })
+      .eq('id', id)
+      .select('id, email, full_name, kyc_status, kyc_reviewed_at, kyc_note')
+      .single();
+
+    if (error) {
+      logger.error('Error updating KYC:', error);
+      return res.status(400).json({
+        error: 'Failed to update KYC status',
+        details: error.message
+      });
+    }
+
+    logger.info(`KYC ${kyc_status} for ${target.email} by ${req.user.id}`);
+
+    res.json({
+      message:
+        kyc_status === 'approved'
+          ? 'Identité validée — le promoteur peut retirer ses fonds'
+          : 'Statut mis à jour',
+      tenant: updated
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getTenants,
   setTenantActive,
+  setTenantKyc,
   getWithdrawals,
   approveWithdrawal: transition('approved', ['pending'], 'Retrait validé'),
   markWithdrawalPaid: transition('paid', ['approved'], 'Retrait marqué comme payé'),

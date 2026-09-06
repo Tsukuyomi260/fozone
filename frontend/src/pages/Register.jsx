@@ -19,16 +19,9 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const response = await register(formData.email, formData.password, formData.full_name);
-      // Le compte naît inactif: aucun jeton n'est délivré, inutile d'aller
-      // vers le dashboard qui rejetterait chaque requête.
-      if (response.pending_approval) {
-        toast.success(response.message, { duration: 6000 });
-        navigate('/login');
-      } else {
-        toast.success('Inscription réussie !');
-        navigate('/dashboard');
-      }
+      await register(formData.email, formData.password, formData.full_name);
+      toast.success('Inscription réussie !');
+      navigate('/dashboard');
     } catch (error) {
       console.error('[Register] Erreur:', error);
       toast.error(error.message || 'Impossible de créer le compte');

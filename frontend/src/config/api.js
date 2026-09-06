@@ -73,7 +73,13 @@ async function apiRequest(endpoint, options = {}) {
       }
       
       // Message d'erreur user-friendly (déjà sanitized par le backend)
-      const errorMessage = data.error || 'Une erreur est survenue. Veuillez réessayer';
+      // Les erreurs de validation arrivent avec un 'error' générique en anglais
+      // et le vrai motif dans 'message'. Afficher le premier laissait
+      // l'utilisateur devant un « Validation failed » sans savoir quoi corriger.
+      const errorMessage =
+        (data.error === 'Validation failed' && data.message) ||
+        data.error ||
+        'Une erreur est survenue. Veuillez réessayer';
       
       // Logger les détails techniques uniquement en console (pas affichés à l'utilisateur)
       if (process.env.NODE_ENV === 'development' && data._debug) {

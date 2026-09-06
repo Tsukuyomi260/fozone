@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Users, Wifi } from 'lucide-react';
-import { getTenants, setTenantActive } from '../../services/admin';
+import { getTenants, setTenantActive, setTenantKyc } from '../../services/admin';
 import { SkeletonHeader, SkeletonTable } from '../../components/Skeleton';
 
 export default function AdminTenants() {
@@ -45,8 +45,36 @@ export default function AdminTenants() {
     }
   };
 
+  const toggleKyc = async (tenant) => {
+    const approving = tenant.kyc_status !== 'approved';
+    const message = approving
+      ? `Valider l'identité de ${tenant.email} ? Il pourra alors retirer ses fonds.`
+      : `Révoquer la validation de ${tenant.email} ? Ses retraits seront bloqués.`;
+
+    if (!window.confirm(message)) return;
+
+    setActing(tenant.id);
+    try {
+      const response = await setTenantKyc(tenant.id, approving ? 'approved' : 'none');
+      toast.success(response.message);
+      loadTenants();
+    } catch (error) {
+      toast.error(error.message || 'Opération impossible');
+    } finally {
+      setActing(null);
+    }
+  };
+
   const card =
     'rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30';
+
+  // Un seul endroit pour l'apparence des quatre statuts KYC
+  const KYC = {
+    approved: { label: 'Vérifié', className: 'bg-lime-50 dark:bg-lime-400/10 text-lime-700 dark:text-lime-400' },
+    pending: { label: 'En revue', className: 'bg-amber-50 dark:bg-amber-400/10 text-amber-700 dark:text-amber-400' },
+    rejected: { label: 'Refusé', className: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400' },
+    none: { label: 'Non vérifié', className: 'bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-400' },
+  };
 
   const th =
     'px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap';
@@ -67,7 +95,7 @@ export default function AdminTenants() {
     return (
       <div className="space-y-5 md:space-y-6 w-full">
         <SkeletonHeader action={false} />
-        <SkeletonTable rows={5} cols={6} />
+        <SkeletonTable rows={5} cols={8} />
       </div>
     );
   }
@@ -142,6 +170,7 @@ export default function AdminTenants() {
                   <th className={th}>VOLUME BRUT</th>
                   <th className={th}>COMMISSION</th>
                   <th className={th}>SOLDE DÛ</th>
+                  <th className={th}>IDENTITÉ</th>
                   <th className={th}>STATUT</th>
                 </tr>
               </thead>
@@ -174,12 +203,34 @@ export default function AdminTenants() {
                       <div className="flex items-center gap-2">
                         <span
                           className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                            (KYC[t.kyc_status] || KYC.none).className
+                          }`}
+                        >
+                          {(KYC[t.kyc_status] || KYC.none).label}
+                        </span>
+                        <button
+                          disabled={acting === t.id}
+                          onClick={() => toggleKyc(t)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-50 ${
+                            t.kyc_status === 'approved'
+                              ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10'
+                              : 'bg-lime-400 hover:bg-lime-300 text-[#0A1005]'
+                          }`}
+                        >
+                          {t.kyc_status === 'approved' ? 'Révoquer' : 'Valider'}
+                        </button>
+                      </div>
+                    </td>
+                    <td className={td}>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold ${
                             t.is_active
                               ? 'bg-lime-50 dark:bg-lime-400/10 text-lime-700 dark:text-lime-400'
                               : 'bg-amber-50 dark:bg-amber-400/10 text-amber-700 dark:text-amber-400'
                           }`}
                         >
-                          {t.is_active ? 'Actif' : 'En attente'}
+                          {t.is_active ? 'Actif' : 'Suspendu'}
                         </span>
                         <button
                           disabled={acting === t.id}

@@ -20,6 +20,14 @@ export async function setTenantActive(id, isActive) {
 }
 
 /**
+ * Valide ou refuse l'identité d'un promoteur. C'est ce statut qui autorise
+ * le retrait des fonds ; vendre reste libre sans lui.
+ */
+export async function setTenantKyc(id, kycStatus, note) {
+  return api.put(`/admin/tenants/${id}/kyc`, { kyc_status: kycStatus, note });
+}
+
+/**
  * Demandes de retrait, optionnellement filtrées par statut
  */
 export async function getWithdrawals(status) {

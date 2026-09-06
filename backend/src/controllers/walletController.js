@@ -13,7 +13,13 @@ const logger = require('../config/logger');
 async function getWalletBalance(req, res, next) {
   try {
     const balance = await getBalance(req.user.ownerId);
-    res.json({ balance });
+    // Le statut voyage avec le solde: la page a besoin des deux, autant
+    // eviter un second aller-retour.
+    res.json({
+      balance,
+      kyc_status: req.user.ownerKycStatus,
+      can_withdraw: req.user.ownerKycStatus === 'approved'
+    });
   } catch (error) {
     logger.error('Error computing balance:', { userId: req.user.id, error: error.message });
     next(error);
@@ -52,6 +58,15 @@ async function requestWithdrawal(req, res, next) {
   try {
     const { amount, payout_phone } = req.body;
     const requested = parseFloat(amount);
+
+    // Verification d'identite exigee avant toute sortie d'argent. C'est la
+    // seule vraie barriere: vendre est libre, encaisser ne l'est pas.
+    if (req.user.ownerKycStatus !== 'approved') {
+      return res.status(403).json({
+        error: "Vérification d'identité requise avant de pouvoir retirer vos fonds",
+        kyc_status: req.user.ownerKycStatus
+      });
+    }
 
     // Le solde est recalcule ici, jamais lu depuis le client: une demande
     // ne peut pas depasser ce que le promoteur a reellement gagne.

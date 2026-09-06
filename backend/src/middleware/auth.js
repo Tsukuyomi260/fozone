@@ -65,7 +65,7 @@ const authenticateToken = async (req, res, next) => {
     // Vérifier que l'utilisateur existe toujours dans Supabase
     const { data: user, error } = await supabaseAdmin
       .from('users')
-      .select('id, email, role, is_active')
+      .select('id, email, role, is_active, kyc_status, email_verified_at')
       .eq('id', decoded.userId)
       .single();
 
@@ -96,6 +96,20 @@ const authenticateToken = async (req, res, next) => {
     req.user = user;
     req.user.ownerId = membership?.owner_id || user.id;
     req.user.isMember = Boolean(membership);
+
+    // Le KYC porte sur le proprietaire du compte, jamais sur le membre qui
+    // agit: c'est l'argent du tenant qui sort. Un membre d'un proprietaire
+    // verifie peut donc demander un retrait.
+    if (membership) {
+      const { data: owner } = await supabaseAdmin
+        .from('users')
+        .select('kyc_status')
+        .eq('id', membership.owner_id)
+        .single();
+      req.user.ownerKycStatus = owner?.kyc_status || 'none';
+    } else {
+      req.user.ownerKycStatus = user.kyc_status;
+    }
 
     next();
   } catch (error) {

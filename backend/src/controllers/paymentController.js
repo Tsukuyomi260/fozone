@@ -47,6 +47,22 @@ async function createPaymentIntent(req, res, next) {
       });
     }
 
+    // Une zone dont le proprietaire est suspendu ne doit plus encaisser.
+    // Sans ce controle, un compte banni continue de prendre l'argent des
+    // clients: le parcours d'achat est public et ne consultait jamais users.
+    const { data: owner } = await supabaseAdmin
+      .from('users')
+      .select('is_active')
+      .eq('id', zone.owner_id)
+      .single();
+
+    if (!owner?.is_active) {
+      logger.warn(`Payment attempt on zone ${zone.id} of a suspended owner`);
+      return res.status(403).json({
+        error: 'Cette zone Wi-Fi est momentanément indisponible'
+      });
+    }
+
     // Le montant est toujours lu en base a partir du tarif: il n'est jamais
     // accepte depuis la requete, sinon le client fixerait son propre prix.
     const { data: pricing } = await supabaseAdmin

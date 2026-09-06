@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Wallet as WalletIcon, ArrowUpRight, Clock, CheckCircle, XCircle, Send } from 'lucide-react';
+import { Wallet as WalletIcon, ArrowUpRight, Clock, CheckCircle, XCircle, Send, ShieldCheck } from 'lucide-react';
 import { getBalance, getMyWithdrawals, requestWithdrawal } from '../services/wallet';
 import { getCurrentUser } from '../services/auth';
 import { SkeletonHeader, SkeletonStats, SkeletonList } from '../components/Skeleton';
@@ -14,6 +14,7 @@ const STATUS = {
 
 export default function Wallet() {
   const [balance, setBalance] = useState(null);
+  const [canWithdraw, setCanWithdraw] = useState(true);
   const [withdrawals, setWithdrawals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -31,6 +32,7 @@ export default function Wallet() {
         getMyWithdrawals(),
       ]);
       setBalance(balanceData.balance);
+      setCanWithdraw(balanceData.can_withdraw !== false);
       setWithdrawals(withdrawalsData.withdrawals || []);
       // Pré-remplir avec le numéro du profil, modifiable avant envoi
       const user = getCurrentUser();
@@ -172,7 +174,21 @@ export default function Wallet() {
             Versé sur votre compte Mobile Money après validation
           </p>
 
-          {hasPending ? (
+          {!canWithdraw ? (
+            <div className="rounded-xl bg-blue-50 dark:bg-blue-400/10 border border-blue-200 dark:border-blue-400/20 p-4">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-400/15 mb-3">
+                <ShieldCheck className="text-blue-600 dark:text-blue-400" size={20} strokeWidth={2.2} />
+              </div>
+              <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                Vérification d'identité requise
+              </p>
+              <p className="text-xs text-blue-800/80 dark:text-blue-300/70">
+                Votre solde continue de s'accumuler normalement. Pour le retirer,
+                votre identité doit d'abord être validée par Fô-Zône.
+                Contactez-nous pour lancer la vérification.
+              </p>
+            </div>
+          ) : hasPending ? (
             <div className="rounded-xl bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 p-4">
               <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
                 Demande en cours

@@ -24,6 +24,17 @@ router.put(
   validate,
   adminController.setTenantActive
 );
+router.put(
+  '/tenants/:id/kyc',
+  idValidation,
+  [
+    body('kyc_status').isIn(['none', 'pending', 'approved', 'rejected']),
+    body('note').optional().trim().isLength({ max: 500 })
+  ],
+  validate,
+  adminController.setTenantKyc
+);
+
 router.get('/withdrawals', adminController.getWithdrawals);
 
 router.put('/withdrawals/:id/approve', idValidation, noteValidation, validate, adminController.approveWithdrawal);
