@@ -1,5 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import PageFallback from './PageFallback';
 import { Moon, Sun, Menu, X, LayoutDashboard, Wallet, Users, LogOut } from 'lucide-react';
 import { logout, getCurrentUser } from '../services/auth';
 import Logo from './Logo';
@@ -167,7 +168,9 @@ export default function AdminLayout() {
         </header>
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           <div className="max-w-[1600px] mx-auto w-full">
-            <Outlet />
+            <Suspense fallback={<PageFallback />}>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>

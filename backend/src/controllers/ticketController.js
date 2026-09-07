@@ -16,68 +16,96 @@ async function getTicketsByZone(req, res, next) {
     const { zoneId } = req.params;
     const { status, pricing_id, page = 1, limit = 50 } = req.query;
 
-    // Vérifier que la zone appartient à l'utilisateur
-    const { data: zone } = await supabaseAdmin
+    // Les parametres arrivent en texte: sans conversion, from + limit - 1
+    // concatenait (page 2: 50 + "50" - 1 = 5049 lignes demandees).
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.max(parseInt(limit, 10) || 50, 1);
+    const from = (pageNum - 1) * limitNum;
+    const to = from + limitNum - 1;
+
+    // Controle de propriete lance en meme temps que la premiere lecture.
+    // Rien n'est renvoye tant que la propriete n'est pas confirmee.
+    const zoneCheck = supabaseAdmin
       .from('wifi_zones')
       .select('id')
       .eq('id', zoneId)
       .eq('owner_id', req.user.ownerId)
       .single();
 
-    if (!zone) {
-      return res.status(404).json({
+    const notFound = () =>
+      res.status(404).json({
         error: 'Wi-Fi zone not found'
       });
-    }
 
-    let query;
-    
-    // Si pricing_id est fourni, filtrer via les payments
-    if (pricing_id) {
-      // D'abord récupérer les payment_ids avec ce pricing_id
-      const { data: payments, error: paymentsError } = await supabaseAdmin
-        .from('payments')
-        .select('id')
-        .eq('wifi_zone_id', zoneId)
-        .eq('pricing_id', pricing_id);
+    const respond = (tickets, count) =>
+      res.json({
+        tickets: tickets || [],
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: count || 0
+        }
+      });
 
-      if (paymentsError) {
-        logger.error('Error fetching payments for pricing filter:', paymentsError);
-        throw paymentsError;
-      }
-
-      const paymentIds = payments?.map(p => p.id) || [];
-      
-      if (paymentIds.length === 0) {
-        // Aucun payment avec ce pricing_id, donc aucun ticket
-        return res.json({
-          tickets: [],
-          pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total: 0
-          }
-        });
-      }
-
-      query = supabaseAdmin
-        .from('tickets')
-        .select('*')
-        .eq('wifi_zone_id', zoneId)
-        .in('payment_id', paymentIds);
-    } else {
-      query = supabaseAdmin
+    // Sans filtre de tarif: controle et lecture en parallele
+    if (!pricing_id) {
+      let query = supabaseAdmin
         .from('tickets')
         .select('*')
         .eq('wifi_zone_id', zoneId);
+
+      if (status) {
+        query = query.eq('status', status);
+      }
+
+      const [{ data: zone }, { data: tickets, error, count }] = await Promise.all([
+        zoneCheck,
+        query.order('created_at', { ascending: false }).range(from, to)
+      ]);
+
+      if (!zone) return notFound();
+
+      if (error) {
+        logger.error('Error fetching tickets:', error);
+        throw error;
+      }
+
+      return respond(tickets, count);
     }
+
+    // Avec filtre de tarif: controle en parallele de la recherche des paiements
+    const [{ data: zone }, { data: payments, error: paymentsError }] = await Promise.all([
+      zoneCheck,
+      supabaseAdmin
+        .from('payments')
+        .select('id')
+        .eq('wifi_zone_id', zoneId)
+        .eq('pricing_id', pricing_id)
+    ]);
+
+    if (!zone) return notFound();
+
+    if (paymentsError) {
+      logger.error('Error fetching payments for pricing filter:', paymentsError);
+      throw paymentsError;
+    }
+
+    const paymentIds = payments?.map(p => p.id) || [];
+
+    if (paymentIds.length === 0) {
+      // Aucun payment avec ce pricing_id, donc aucun ticket
+      return respond([], 0);
+    }
+
+    let query = supabaseAdmin
+      .from('tickets')
+      .select('*')
+      .eq('wifi_zone_id', zoneId)
+      .in('payment_id', paymentIds);
 
     if (status) {
       query = query.eq('status', status);
     }
-
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
 
     const { data: tickets, error, count } = await query
       .order('created_at', { ascending: false })
@@ -88,14 +116,7 @@ async function getTicketsByZone(req, res, next) {
       throw error;
     }
 
-    res.json({
-      tickets: tickets || [],
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: count || 0
-      }
-    });
+    return respond(tickets, count);
   } catch (error) {
     next(error);
   }
@@ -151,14 +172,14 @@ async function importTickets(req, res, next) {
     // Parser le CSV
     return new Promise((resolve, reject) => {
       const stream = Readable.from(req.file.buffer.toString());
-      
+
       stream
         .pipe(csv())
         .on('data', (row) => {
           // Le CSV peut avoir différentes colonnes : Username, Password, Profile, Time Limit, Data Limit, Comment
           const username = row.Username || row.username;
           const password = row.Password || row.password;
-          
+
           if (username && password) {
             const ticketData = {
               wifi_zone_id: zoneId,
@@ -168,11 +189,11 @@ async function importTickets(req, res, next) {
               status: 'free',
               created_at: new Date().toISOString()
             };
-            
+
             // Ajouter pricing_id si fourni (optionnel, pour référence future)
             // Note: On ne stocke pas pricing_id dans tickets car ce n'est pas dans le schéma
             // Mais on peut l'utiliser pour d'autres traitements si nécessaire
-            
+
             tickets.push(ticketData);
           } else {
             errors.push(`Invalid row: ${JSON.stringify(row)}`);
@@ -232,21 +253,23 @@ async function getTicketStats(req, res, next) {
     const { zoneId } = req.params;
     const { getTicketStats } = require('../utils/ticketManager');
 
-    // Vérifier que la zone appartient à l'utilisateur
-    const { data: zone } = await supabaseAdmin
-      .from('wifi_zones')
-      .select('id')
-      .eq('id', zoneId)
-      .eq('owner_id', req.user.ownerId)
-      .single();
+    // Controle de propriete et calcul lances ensemble; les stats ne sortent
+    // qu'une fois la propriete confirmee.
+    const [{ data: zone }, stats] = await Promise.all([
+      supabaseAdmin
+        .from('wifi_zones')
+        .select('id')
+        .eq('id', zoneId)
+        .eq('owner_id', req.user.ownerId)
+        .single(),
+      getTicketStats(zoneId)
+    ]);
 
     if (!zone) {
       return res.status(404).json({
         error: 'Wi-Fi zone not found'
       });
     }
-
-    const stats = await getTicketStats(zoneId);
 
     res.json({
       stats: stats

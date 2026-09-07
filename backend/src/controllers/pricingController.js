@@ -53,26 +53,29 @@ async function getPricingsByZone(req, res, next) {
   try {
     const { zoneId } = req.params;
 
-    // Vérifier que la zone appartient à l'utilisateur
-    const { data: zone } = await supabaseAdmin
-      .from('wifi_zones')
-      .select('id')
-      .eq('id', zoneId)
-      .eq('owner_id', req.user.ownerId)
-      .single();
+    // Controle de propriete et lecture lances ensemble. Les tarifs ne sont
+    // renvoyes qu'une fois la propriete confirmee: une zone d'autrui donne 404
+    // et la lecture est jetee.
+    const [{ data: zone }, { data: pricings, error }] = await Promise.all([
+      supabaseAdmin
+        .from('wifi_zones')
+        .select('id')
+        .eq('id', zoneId)
+        .eq('owner_id', req.user.ownerId)
+        .single(),
+      supabaseAdmin
+        .from('pricings')
+        .select('id, name, amount, duration_hours, description, is_active, created_at, updated_at')
+        .eq('wifi_zone_id', zoneId)
+        .eq('is_active', true)
+        .order('amount', { ascending: true })
+    ]);
 
     if (!zone) {
       return res.status(404).json({
         error: 'Wi-Fi zone not found'
       });
     }
-
-    const { data: pricings, error } = await supabaseAdmin
-      .from('pricings')
-      .select('id, name, amount, duration_hours, description, is_active, created_at, updated_at')
-      .eq('wifi_zone_id', zoneId)
-      .eq('is_active', true)
-      .order('amount', { ascending: true });
 
     if (error) {
       logger.error('Error fetching pricings:', error);
@@ -104,11 +107,11 @@ async function getPricingsByZone(req, res, next) {
 async function createPricing(req, res, next) {
   try {
     const { zoneId } = req.params;
-    
+
     // Utiliser matchedData() pour obtenir les données validées et nettoyées par express-validator
     const { matchedData } = require('express-validator');
     const validatedData = matchedData(req, { locations: ['body'], includeOptionals: true });
-    
+
     // Extraire les valeurs validées (matchedData contient les valeurs après trim() et validation)
     let name = validatedData.name;
     const amount = validatedData.amount !== undefined ? validatedData.amount : req.body.amount;
@@ -175,7 +178,7 @@ async function createPricing(req, res, next) {
       logger.error('Error code:', error.code);
       logger.error('Error hint:', error.hint);
       logger.error('Error details (PostgreSQL):', error.details);
-      
+
       // Vérifier si c'est une erreur de contrainte NOT NULL
       if (error.code === '23502' || error.message?.includes('null value in column')) {
         return res.status(400).json({
@@ -184,7 +187,7 @@ async function createPricing(req, res, next) {
           hint: 'Exécutez la migration 003_make_name_not_null.sql dans Supabase'
         });
       }
-      
+
       return res.status(400).json({
         error: 'Failed to create pricing',
         details: error.message || 'Erreur inconnue lors de la création',
@@ -196,19 +199,19 @@ async function createPricing(req, res, next) {
     // Vérifier que le nom a bien été sauvegardé
     if (!pricing.name) {
       logger.error(`⚠️ WARNING: Pricing created without name! ID: ${pricing.id}, Insert data:`, JSON.stringify(insertData, null, 2));
-      
+
       // Essayer de corriger en mettant à jour directement
       const fallbackName = insertData.duration_hours 
         ? `${insertData.duration_hours} HEURES`
         : `FORFAIT ${insertData.amount} FCFA`;
-      
+
       const { data: updatedPricing, error: updateError } = await supabaseAdmin
         .from('pricings')
         .update({ name: fallbackName })
         .eq('id', pricing.id)
         .select('id, name, amount, duration_hours, description, is_active, created_at, updated_at')
         .single();
-      
+
       if (!updateError && updatedPricing) {
         logger.info(`✅ Nom corrigé automatiquement: "${fallbackName}"`);
         return res.status(201).json({

@@ -41,46 +41,55 @@ async function getGlobalStats(req, res, next) {
       });
     }
 
-    // Chiffre d'affaires total
-    const { data: totalRevenueData } = await supabaseAdmin
-      .from('payments')
-      .select('amount')
-      .in('wifi_zone_id', zoneIds)
-      .eq('status', 'completed');
+    // Les cinq requetes sont independantes: lancees ensemble, la page attend
+    // la plus lente au lieu de leur somme.
+    const [
+      { data: totalRevenueData },
+      { data: todayRevenueData },
+      { count: totalTicketsSold },
+      { count: todayTicketsSold },
+      { data: activeZonesData }
+    ] = await Promise.all([
+      // Chiffre d'affaires total
+      supabaseAdmin
+        .from('payments')
+        .select('amount')
+        .in('wifi_zone_id', zoneIds)
+        .eq('status', 'completed'),
+
+      // Recettes du jour
+      supabaseAdmin
+        .from('payments')
+        .select('amount, net_to_tenant')
+        .in('wifi_zone_id', zoneIds)
+        .eq('status', 'completed')
+        .gte('completed_at', todayISO),
+
+      // Nombre total de tickets vendus
+      supabaseAdmin
+        .from('tickets')
+        .select('id', { count: 'exact', head: true })
+        .in('wifi_zone_id', zoneIds)
+        .eq('status', 'sold'),
+
+      // Tickets vendus aujourd'hui
+      supabaseAdmin
+        .from('tickets')
+        .select('id', { count: 'exact', head: true })
+        .in('wifi_zone_id', zoneIds)
+        .eq('status', 'sold')
+        .gte('sold_at', todayISO),
+
+      // Zones actives (avec au moins un ticket vendu)
+      supabaseAdmin
+        .from('tickets')
+        .select('wifi_zone_id')
+        .in('wifi_zone_id', zoneIds)
+        .eq('status', 'sold')
+    ]);
 
     const total_revenue = totalRevenueData?.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0) || 0;
-
-    // Recettes du jour
-    const { data: todayRevenueData } = await supabaseAdmin
-      .from('payments')
-      .select('amount, net_to_tenant')
-      .in('wifi_zone_id', zoneIds)
-      .eq('status', 'completed')
-      .gte('completed_at', todayISO);
-
     const today_revenue = todayRevenueData?.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0) || 0;
-
-    // Nombre total de tickets vendus
-    const { count: totalTicketsSold } = await supabaseAdmin
-      .from('tickets')
-      .select('id', { count: 'exact', head: true })
-      .in('wifi_zone_id', zoneIds)
-      .eq('status', 'sold');
-
-    // Tickets vendus aujourd'hui
-    const { count: todayTicketsSold } = await supabaseAdmin
-      .from('tickets')
-      .select('id', { count: 'exact', head: true })
-      .in('wifi_zone_id', zoneIds)
-      .eq('status', 'sold')
-      .gte('sold_at', todayISO);
-
-    // Zones actives (avec au moins un ticket vendu)
-    const { data: activeZonesData } = await supabaseAdmin
-      .from('tickets')
-      .select('wifi_zone_id')
-      .in('wifi_zone_id', zoneIds)
-      .eq('status', 'sold');
 
     const activeZoneIds = [...new Set(activeZonesData?.map(t => t.wifi_zone_id) || [])];
 

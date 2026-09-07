@@ -12,6 +12,7 @@
 
 const bcrypt = require('bcryptjs');
 const { supabaseAdmin } = require('../config/database');
+const { clearAuthCache } = require('../middleware/auth');
 const logger = require('../config/logger');
 
 /**
@@ -168,6 +169,10 @@ async function addMember(req, res, next) {
       });
     }
 
+    // Un compte deja connecte doit basculer tout de suite sur les donnees
+    // du proprietaire
+    clearAuthCache();
+
     logger.info(`Team member added: ${user.email} to owner ${req.user.ownerId}`);
 
     res.status(201).json({
@@ -200,6 +205,9 @@ async function removeMember(req, res, next) {
     if (error || !deleted) {
       return res.status(404).json({ error: 'Membre introuvable' });
     }
+
+    // Un acces retire ne doit pas survivre dans le cache
+    clearAuthCache();
 
     logger.info(`Team member removed: ${deleted.member_id} from owner ${req.user.ownerId}`);
 

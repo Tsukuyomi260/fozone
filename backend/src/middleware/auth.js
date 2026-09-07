@@ -7,6 +7,84 @@ const jwt = require('jsonwebtoken');
 const { supabaseAdmin } = require('../config/database');
 const logger = require('../config/logger');
 
+// Contexte d'authentification mis en cache quelques secondes.
+//
+// Chaque appel API relisait l'utilisateur puis son equipe: deux allers-retours
+// base avant meme de traiter la requete, soit l'essentiel du temps des petites
+// pages. Une page lance 2 a 4 appels en parallele, tous pour le meme compte.
+//
+// On stocke la promesse, pas le resultat: des appels simultanes partagent la
+// meme requete en vol au lieu d'en lancer chacun une.
+//
+// Toute action qui change un compte (suspension, KYC, equipe, profil) appelle
+// clearAuthCache(): l'effet reste immediat sur cette instance. Le delai ne
+// joue que si plusieurs instances tournaient en parallele.
+const AUTH_CACHE_TTL_MS = 30 * 1000;
+const authCache = new Map();
+
+const AUTH_SELECT =
+  'id, email, role, is_active, kyc_status, email_verified_at, ' +
+  'membership:team_members!team_members_member_id_fkey(' +
+  'owner_id, owner:users!team_members_owner_id_fkey(kyc_status))';
+
+async function fetchAuthContext(userId) {
+  const { data: user, error } = await supabaseAdmin
+    .from('users')
+    .select(AUTH_SELECT)
+    .eq('id', userId)
+    .single();
+
+  if (error || !user) {
+    return { user: null, error };
+  }
+
+  // Proprietaire effectif: le compte dont on manipule les donnees.
+  // Soi-meme pour un promoteur, l'inviteur pour un membre d'equipe.
+  // Jamais mis dans le jeton: une invitation peut etre revoquee.
+  const { membership, ...fields } = user;
+
+  return {
+    user: {
+      ...fields,
+      ownerId: membership?.owner_id || user.id,
+      isMember: Boolean(membership),
+      // Le KYC porte sur le proprietaire, jamais sur le membre qui agit:
+      // c'est l'argent du tenant qui sort.
+      ownerKycStatus: membership
+        ? membership.owner?.kyc_status || 'none'
+        : user.kyc_status
+    }
+  };
+}
+
+function loadAuthContext(userId) {
+  const cached = authCache.get(userId);
+  if (cached && cached.expires > Date.now()) {
+    return cached.promise;
+  }
+
+  const promise = fetchAuthContext(userId);
+  authCache.set(userId, { promise, expires: Date.now() + AUTH_CACHE_TTL_MS });
+
+  // Un echec ne doit pas rester en cache 30 secondes
+  promise
+    .then((result) => {
+      if (!result.user) authCache.delete(userId);
+    })
+    .catch(() => authCache.delete(userId));
+
+  return promise;
+}
+
+/**
+ * Vide le cache d'authentification. A appeler apres toute modification d'un
+ * compte ou d'une equipe. On vide tout plutot qu'une entree: changer le KYC
+ * d'un proprietaire doit aussi rafraichir ses membres.
+ */
+function clearAuthCache() {
+  authCache.clear();
+}
+
 /**
  * Middleware pour vérifier l'authentification via JWT
  */
@@ -62,12 +140,8 @@ const authenticateToken = async (req, res, next) => {
       });
     }
     
-    // Vérifier que l'utilisateur existe toujours dans Supabase
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('id, email, role, is_active, kyc_status, email_verified_at')
-      .eq('id', decoded.userId)
-      .single();
+    // L'utilisateur, son equipe et le KYC du proprietaire en une seule requete
+    const { user, error } = await loadAuthContext(decoded.userId);
 
     if (error || !user) {
       logger.error('User not found in database:', { userId: decoded.userId, error });
@@ -82,34 +156,9 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
-    // Proprietaire effectif: le compte dont on manipule les donnees.
-    // Soi-meme pour un promoteur, l'inviteur pour un membre d'equipe.
-    //
-    // Resolu a chaque requete, jamais mis dans le jeton: une invitation peut
-    // etre revoquee, et un jeton de 7 jours continuerait d'ouvrir l'acces.
-    const { data: membership } = await supabaseAdmin
-      .from('team_members')
-      .select('owner_id')
-      .eq('member_id', user.id)
-      .maybeSingle();
-
-    req.user = user;
-    req.user.ownerId = membership?.owner_id || user.id;
-    req.user.isMember = Boolean(membership);
-
-    // Le KYC porte sur le proprietaire du compte, jamais sur le membre qui
-    // agit: c'est l'argent du tenant qui sort. Un membre d'un proprietaire
-    // verifie peut donc demander un retrait.
-    if (membership) {
-      const { data: owner } = await supabaseAdmin
-        .from('users')
-        .select('kyc_status')
-        .eq('id', membership.owner_id)
-        .single();
-      req.user.ownerKycStatus = owner?.kyc_status || 'none';
-    } else {
-      req.user.ownerKycStatus = user.kyc_status;
-    }
+    // Copie: l'objet en cache est partage entre requetes, aucun controleur
+    // ne doit pouvoir le modifier pour les suivantes.
+    req.user = { ...user };
 
     next();
   } catch (error) {
@@ -177,6 +226,7 @@ const authenticateSupabase = async (req, res, next) => {
 module.exports = {
   authenticateToken,
   authenticateSupabase,
-  requireSuperAdmin
+  requireSuperAdmin,
+  clearAuthCache
 };
 

@@ -72,7 +72,7 @@ async function getPaymentStats(req, res, next) {
       const dayKey = period === 'days' 
         ? `Jour ${date.getDate()}`
         : date.toISOString().split('T')[0];
-      
+
       if (!dailyStats[dayKey]) {
         dailyStats[dayKey] = { revenue: 0, count: 0 };
       }
@@ -145,7 +145,7 @@ async function getTicketsSoldStats(req, res, next) {
       const dayKey = period === 'days'
         ? `Jour ${date.getDate()}`
         : date.toISOString().split('T')[0];
-      
+
       if (!dailyStats[dayKey]) {
         dailyStats[dayKey] = 0;
       }
@@ -188,7 +188,7 @@ async function getPaymentHistory(req, res, next) {
         .eq('id', zoneId)
         .eq('owner_id', userId)
         .single();
-      
+
       if (!zone) {
         return res.status(404).json({ error: 'Wi-Fi zone not found' });
       }
@@ -261,20 +261,27 @@ async function getPaymentHistory(req, res, next) {
       countQuery = countQuery.or(`moneroo_payment_id.ilike.%${search}%,phone.ilike.%${search}%`);
     }
 
-    const { count, error: countError } = await countQuery;
-    
+    // Pagination. Les parametres arrivent en texte: sans conversion,
+    // from + limit - 1 concatenait (page 2: 10 + "10" - 1 = 1009) et la page 2
+    // chargeait jusqu'a 1000 lignes au lieu de 10.
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.max(parseInt(limit, 10) || 10, 1);
+    const from = (pageNum - 1) * limitNum;
+    const to = from + limitNum - 1;
+
+    // Total et page demandee sont independants: lances ensemble
+    const [
+      { count, error: countError },
+      { data: payments, error }
+    ] = await Promise.all([
+      countQuery,
+      query.order('completed_at', { ascending: false }).range(from, to)
+    ]);
+
     if (countError) {
       logger.error('Error counting payments:', countError);
       throw countError;
     }
-
-    // Pagination
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    const { data: payments, error } = await query
-      .order('completed_at', { ascending: false })
-      .range(from, to);
 
     if (error) {
       logger.error('Error fetching payment history:', error);
@@ -284,13 +291,13 @@ async function getPaymentHistory(req, res, next) {
     // Récupérer les tickets associés séparément (la relation va de tickets vers payments)
     const paymentIds = payments?.map(p => p.id) || [];
     let ticketsMap = {};
-    
+
     if (paymentIds.length > 0) {
       const { data: tickets, error: ticketsError } = await supabaseAdmin
         .from('tickets')
         .select('id, username, password, payment_id')
         .in('payment_id', paymentIds);
-      
+
       if (!ticketsError && tickets) {
         // Créer un map pour accéder rapidement aux tickets par payment_id
         tickets.forEach(ticket => {
@@ -361,7 +368,7 @@ async function exportPaymentHistoryCSV(req, res, next) {
         .eq('id', zoneId)
         .eq('owner_id', userId)
         .single();
-      
+
       if (!zone) {
         return res.status(404).json({ error: 'Wi-Fi zone not found' });
       }
@@ -409,13 +416,13 @@ async function exportPaymentHistoryCSV(req, res, next) {
     // Récupérer les tickets associés séparément pour l'export CSV
     const paymentIds = payments?.map(p => p.id) || [];
     let ticketsMap = {};
-    
+
     if (paymentIds.length > 0) {
       const { data: tickets, error: ticketsError } = await supabaseAdmin
         .from('tickets')
         .select('id, username, password, payment_id')
         .in('payment_id', paymentIds);
-      
+
       if (!ticketsError && tickets) {
         tickets.forEach(ticket => {
           if (ticket.payment_id) {

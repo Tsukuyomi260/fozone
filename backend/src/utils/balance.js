@@ -24,23 +24,29 @@ const { supabaseAdmin } = require('../config/database');
  * @returns {Promise<{earned:number, withdrawn:number, pending:number, available:number}>}
  */
 async function getBalance(ownerId) {
-  // Ce qui a ete gagne: net promoteur sur les ventes abouties
-  const { data: payments, error: paymentsError } = await supabaseAdmin
-    .from('payments')
-    .select('net_to_tenant')
-    .eq('owner_id', ownerId)
-    .eq('status', 'completed');
+  // Gains et retraits sont independants: lus en parallele
+  const [
+    { data: payments, error: paymentsError },
+    { data: withdrawals, error: withdrawalsError }
+  ] = await Promise.all([
+    // Ce qui a ete gagne: net promoteur sur les ventes abouties
+    supabaseAdmin
+      .from('payments')
+      .select('net_to_tenant')
+      .eq('owner_id', ownerId)
+      .eq('status', 'completed'),
+
+    // Ce qui est sorti ou engage
+    supabaseAdmin
+      .from('withdrawals')
+      .select('amount, status')
+      .eq('owner_id', ownerId)
+      .in('status', ['approved', 'paid'])
+  ]);
 
   if (paymentsError) {
     throw new Error('Failed to load earnings: ' + paymentsError.message);
   }
-
-  // Ce qui est sorti ou engage
-  const { data: withdrawals, error: withdrawalsError } = await supabaseAdmin
-    .from('withdrawals')
-    .select('amount, status')
-    .eq('owner_id', ownerId)
-    .in('status', ['approved', 'paid']);
 
   if (withdrawalsError) {
     throw new Error('Failed to load withdrawals: ' + withdrawalsError.message);

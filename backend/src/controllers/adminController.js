@@ -5,6 +5,7 @@
  */
 
 const { supabaseAdmin } = require('../config/database');
+const { clearAuthCache } = require('../middleware/auth');
 const { getBalance } = require('../utils/balance');
 const { commissionOn } = require('../config/commission');
 const logger = require('../config/logger');
@@ -251,6 +252,9 @@ async function setTenantActive(req, res, next) {
       });
     }
 
+    // Une suspension doit couper l'acces tout de suite, pas dans 30 secondes
+    clearAuthCache();
+
     logger.info(
       `Tenant ${target.email} ${is_active ? 'activated' : 'deactivated'} by ${req.user.id}`
     );
@@ -308,6 +312,8 @@ async function setTenantKyc(req, res, next) {
         details: error.message
       });
     }
+
+    clearAuthCache();
 
     logger.info(`KYC ${kyc_status} for ${target.email} by ${req.user.id}`);
 

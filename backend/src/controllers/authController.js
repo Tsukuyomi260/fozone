@@ -6,6 +6,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { supabaseAdmin } = require('../config/database');
+const { clearAuthCache } = require('../middleware/auth');
 const logger = require('../config/logger');
 
 /**
@@ -231,6 +232,8 @@ async function updateProfile(req, res, next) {
         details: error.message
       });
     }
+
+    clearAuthCache();
 
     logger.info(`Profile updated for user ${userId}`);
 

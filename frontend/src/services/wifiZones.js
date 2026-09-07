@@ -5,11 +5,40 @@
 import api from '../config/api';
 import { getApiUrl } from '../config/env';
 
+// Liste des zones gardée en mémoire le temps de naviguer : Dashboard, Tarifs,
+// Tickets et Compta la redemandaient chacune à leur ouverture.
+//
+// Liée au jeton : changer de compte dans le même onglet repart à vide.
+// Toute création, modification ou suppression vide le cache.
+const ZONES_TTL_MS = 60 * 1000;
+let zonesCache = null;
+
+function invalidateZones() {
+  zonesCache = null;
+}
+
 /**
  * Récupère toutes les zones Wi-Fi
  */
-export async function getWifiZones() {
-  return api.get('/wifi-zones');
+export function getWifiZones() {
+  const token = localStorage.getItem('auth_token');
+
+  if (!zonesCache || zonesCache.token !== token || zonesCache.expires <= Date.now()) {
+    const promise = api.get('/wifi-zones');
+    zonesCache = { token, promise, expires: Date.now() + ZONES_TTL_MS };
+
+    // Un échec ne doit pas rester en cache
+    promise.catch(() => {
+      if (zonesCache?.promise === promise) invalidateZones();
+    });
+  }
+
+  // Copie du tableau : une page qui le modifie ne doit pas altérer celui
+  // que recevra la suivante.
+  return zonesCache.promise.then((response) => ({
+    ...response,
+    zones: [...(response.zones || [])],
+  }));
 }
 
 /**
@@ -23,21 +52,33 @@ export async function getWifiZoneById(id) {
  * Crée une nouvelle zone Wi-Fi
  */
 export async function createWifiZone(zoneData) {
-  return api.post('/wifi-zones', zoneData);
+  try {
+    return await api.post('/wifi-zones', zoneData);
+  } finally {
+    invalidateZones();
+  }
 }
 
 /**
  * Met à jour une zone Wi-Fi
  */
 export async function updateWifiZone(id, zoneData) {
-  return api.put(`/wifi-zones/${id}`, zoneData);
+  try {
+    return await api.put(`/wifi-zones/${id}`, zoneData);
+  } finally {
+    invalidateZones();
+  }
 }
 
 /**
  * Supprime une zone Wi-Fi
  */
 export async function deleteWifiZone(id) {
-  return api.delete(`/wifi-zones/${id}`);
+  try {
+    return await api.delete(`/wifi-zones/${id}`);
+  } finally {
+    invalidateZones();
+  }
 }
 
 /**
