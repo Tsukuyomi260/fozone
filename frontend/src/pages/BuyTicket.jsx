@@ -4,6 +4,7 @@ import { ShoppingCart, Wifi, MessageCircle } from 'lucide-react';
 import { getPublicWifiZoneById } from '../services/wifiZones';
 import { getPublicPricingsByZone } from '../services/pricings';
 import { createPaymentIntent } from '../services/payments';
+import { getCountry, normalizePhone, formatPhoneDisplay } from '../config/countries';
 import toast from 'react-hot-toast';
 
 export default function BuyTicket() {
@@ -56,16 +57,13 @@ export default function BuyTicket() {
   };
 
   // Le numero part chez Moneroo et sert de reference client dans la
-  // comptabilite. On n'envoie que des chiffres: un numero beninois saisi
-  // a 8 chiffres recoit l'indicatif 229.
-  const normalizePhone = (value) => {
-    const digits = value.replace(/\D/g, '');
-    if (digits.length === 8) return `229${digits}`;
-    return digits;
-  };
-
-  const normalizedPhone = normalizePhone(phone);
-  const phoneIsValid = normalizedPhone.length >= 8;
+  // comptabilite. L'indicatif vient du pays de la zone: l'ancienne version
+  // ajoutait 229 des que le numero faisait 8 chiffres, donc un numero ivoirien
+  // (dix chiffres) partait sans indicatif et Moneroo ne pouvait pas le
+  // rattacher a un operateur.
+  const country = getCountry(zone?.country);
+  const normalizedPhone = normalizePhone(phone, country.code);
+  const phoneIsValid = normalizedPhone.length >= 10;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -178,17 +176,22 @@ export default function BuyTicket() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Numéro de téléphone
               </label>
-              <input
-                type="tel"
-                inputMode="numeric"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="97 00 00 00"
-                className="input w-full"
-                required
-              />
+              <div className="flex items-stretch gap-2">
+                <span className="inline-flex items-center px-3 rounded-xl border border-green-200 dark:border-gray-600 bg-green-50 dark:bg-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                  +{country.dialCode}
+                </span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder={country.placeholder}
+                  className="input w-full"
+                  required
+                />
+              </div>
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Le numéro Mobile Money qui servira au paiement.
+                Le numéro Mobile Money qui servira au paiement ({country.name}).
               </p>
             </div>
 
@@ -212,23 +215,26 @@ export default function BuyTicket() {
             </button>
           </form>
 
-          {/* Contact support */}
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
-              Si vous avez besoin d'assistance ou besoin d'aide pour acheter le ticket, veuillez contacter le :
-            </p>
-            <div className="flex items-center justify-center mt-2">
-              <MessageCircle className="text-green-600 dark:text-green-400 mr-2" size={20} />
-              <a
-                href={`https://wa.me/2290153489846`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-green-600 dark:text-green-400 font-medium text-sm hover:underline"
-              >
-                +229 01 53 48 98 46
-              </a>
+          {/* Contact du gerant de la zone, pas de la plateforme: c'est lui
+              que le client connait et qui peut l'aider sur place. */}
+          {zone.manager_phone && (
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
+                Besoin d'aide pour acheter votre ticket ? Contactez le gérant :
+              </p>
+              <div className="flex items-center justify-center mt-2">
+                <MessageCircle className="text-green-600 dark:text-green-400 mr-2" size={20} />
+                <a
+                  href={`https://wa.me/${normalizePhone(zone.manager_phone, country.code)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-green-600 dark:text-green-400 font-medium text-sm hover:underline"
+                >
+                  {formatPhoneDisplay(zone.manager_phone, country.code)}
+                </a>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

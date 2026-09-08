@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, Wifi, Copy, RefreshCw, MessageCircle } from 'lucide-react';
 import { getPaymentStatus, getPaymentByPhone } from '../services/payments';
+import { normalizePhone } from '../config/countries';
 import toast from 'react-hot-toast';
 import Logo from '../components/Logo';
 
@@ -67,6 +68,14 @@ export default function PaymentReturn() {
     if (hours === 720) return '30J';
     return `${hours}H`;
   };
+
+  // Contact affiche en bas de page: celui du gerant des qu'on sait de quelle
+  // zone vient le ticket, celui de la plateforme avant la recherche.
+  const PLATFORM_PHONE = '2290153489846';
+  const managerPhone = payment?.wifi_zones?.manager_phone;
+  const supportPhone = managerPhone
+    ? { digits: normalizePhone(managerPhone, payment?.wifi_zones?.country), isManager: true }
+    : { digits: PLATFORM_PHONE, isManager: false };
 
   const getPaymentReference = () => {
     // L'identifiant Moneroo est la seule reference que le client puisse
@@ -168,7 +177,7 @@ export default function PaymentReturn() {
                     inputMode="numeric"
                     value={lookupRef}
                     onChange={(e) => setLookupRef(e.target.value)}
-                    placeholder="97 00 00 00"
+                    placeholder="Votre numéro Mobile Money"
                     className="input w-full"
                     autoFocus
                   />
@@ -361,21 +370,25 @@ export default function PaymentReturn() {
               </>
             )}
 
-            {/* Section Support */}
+            {/* Section Support.
+                Une fois le ticket retrouve, on sait de quelle zone il vient:
+                c'est son gerant qui peut aider le client, pas la plateforme. */}
             <div className="pt-6 border-t border-green-100 dark:border-gray-700">
               <p className="text-xs text-gray-600 dark:text-gray-400 text-center mb-3">
-                Pour toute assistance ou un problème de ticket, contactez le :
+                {supportPhone.isManager
+                  ? 'Un problème avec votre ticket ? Contactez le gérant :'
+                  : 'Pour toute assistance, contactez Fô-Zône :'}
               </p>
               <div className="flex items-center justify-center gap-2">
                 <a
-                  href="tel:+2290153489846"
+                  href={`tel:+${supportPhone.digits}`}
                   className="text-green-600 dark:text-green-400 font-semibold text-sm hover:text-green-700 dark:hover:text-green-300 transition-colors"
                 >
-                  +2290153489846
+                  +{supportPhone.digits}
                 </a>
                 <span className="text-gray-400">|</span>
                 <a
-                  href="https://wa.me/2290153489846"
+                  href={`https://wa.me/${supportPhone.digits}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-green-600 dark:text-green-400 font-semibold text-sm hover:text-green-700 dark:hover:text-green-300 transition-colors"

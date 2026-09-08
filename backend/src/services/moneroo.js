@@ -19,9 +19,7 @@ const IS_SANDBOX = (MONEROO_API_KEY || '').startsWith('test_');
 
 // La passerelle de test Moneroo n'apparait sur la page de paiement que si elle
 // est explicitement demandee. On ne l'expose qu'en sandbox.
-const DEFAULT_METHODS = IS_SANDBOX
-  ? ['moneroo_payment_demo', 'mtn_bj', 'moov_bj']
-  : ['mtn_bj', 'moov_bj'];
+const DEMO_METHOD = 'moneroo_payment_demo';
 const MONEROO_WEBHOOK_SECRET = process.env.MONEROO_WEBHOOK_SECRET;
 
 // Logger la configuration au démarrage (sans exposer la clé complète)
@@ -74,7 +72,10 @@ async function createPayment(paymentData) {
       return_url,
       customer,
       metadata = {},
-      methods = DEFAULT_METHODS // Bénin, + passerelle de test en sandbox
+      // Sans liste, Moneroo affiche toutes les methodes activees dans le
+      // tableau de bord ("If not provided, all available payment methods will
+      // be allowed"). L'appelant fournit normalement celles du pays de la zone.
+      methods
     } = paymentData;
 
     // Préparer le payload selon la documentation Moneroo
@@ -101,9 +102,13 @@ async function createPayment(paymentData) {
       // Pour l'instant, on laisse juste le phone dans customer pour pré-remplir
     }
 
-    // Ajouter les méthodes de paiement si spécifiées
+    // Ajouter les méthodes de paiement si spécifiées.
+    // En sandbox, la passerelle de demonstration est ajoutee a la liste:
+    // sans elle, aucun paiement de test n'est possible.
     if (methods && methods.length > 0) {
-      payload.methods = methods;
+      payload.methods = IS_SANDBOX && !methods.includes(DEMO_METHOD)
+        ? [DEMO_METHOD, ...methods]
+        : methods;
     }
 
     const response = await axios.post(

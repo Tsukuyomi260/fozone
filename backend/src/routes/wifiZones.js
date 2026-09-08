@@ -8,12 +8,16 @@ const { body, param } = require('express-validator');
 const wifiZoneController = require('../controllers/wifiZoneController');
 const { authenticateToken } = require('../middleware/auth');
 const validate = require('../middleware/validator');
+const { COUNTRIES } = require('../config/countries');
+
+const SUPPORTED_COUNTRIES = Object.keys(COUNTRIES);
 
 // Validation pour la création/mise à jour
 const zoneValidation = [
   body('name').trim().isLength({ min: 1, max: 255 }),
   body('router_ip').trim().isLength({ min: 1, max: 255 }), // Accepte IP, DNS ou VPN
   body('manager_phone').trim().isLength({ min: 8, max: 20 }),
+  body('country').optional().isIn(SUPPORTED_COUNTRIES),
   body('latitude').optional().isFloat({ min: -90, max: 90 }),
   body('longitude').optional().isFloat({ min: -180, max: 180 }),
   body('address').optional().trim()

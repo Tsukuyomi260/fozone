@@ -8,7 +8,24 @@ const { createPayment, verifyPayment, verifyWebhookSignature, parseWebhookPayloa
 const { assignTicketAtomically } = require('../utils/ticketManager');
 const { checkIdempotency, saveIdempotency } = require('../utils/idempotency');
 const { platformFeeOn, netToTenant } = require('../config/platformCommission');
+const { methodsFor, normalizePhone, phoneCandidates } = require('../config/countries');
 const logger = require('../config/logger');
+
+/**
+ * Extrait la methode de paiement reellement utilisee (mtn_bj, wave_ci...).
+ * Meme logique que pour le numero du payeur: l'emplacement du champ varie
+ * selon la passerelle, d'ou les alternatives.
+ */
+function extractPaymentMethod(data) {
+  return (
+    data?.method ||
+    data?.payment_method ||
+    data?.capture?.method ||
+    data?.capture?.gateway?.method ||
+    data?.capture?.gateway?.name ||
+    null
+  );
+}
 
 /**
  * Extrait le numero du payeur d'un objet paiement Moneroo.
@@ -37,7 +54,7 @@ async function createPaymentIntent(req, res, next) {
     // Vérifier que la zone Wi-Fi existe
     const { data: zone, error: zoneError } = await supabaseAdmin
       .from('wifi_zones')
-      .select('id, name, owner_id')
+      .select('id, name, owner_id, country')
       .eq('id', wifi_zone_id)
       .single();
 
@@ -95,13 +112,19 @@ async function createPaymentIntent(req, res, next) {
         email: customer?.email || 'client@example.com',
         first_name: customer?.first_name || 'Client',
         last_name: customer?.last_name || 'WiFi',
-        phone: customer?.phone || undefined // Ne pas envoyer si non fourni
+        // Renormalise cote serveur: un numero local saisi sur le portail doit
+        // partir avec l'indicatif du pays de la zone, sinon Moneroo ne peut pas
+        // le rattacher a un operateur.
+        phone: customer?.phone ? normalizePhone(customer.phone, zone.country) : undefined
       },
       metadata: {
         wifi_zone_id: wifi_zone_id,
         pricing_id: pricing_id || null
       },
-      methods: ['mtn_bj', 'moov_bj'] // Méthodes disponibles au Bénin
+      // Les methodes du pays de la zone, et elles seules. L'ancienne version
+      // imposait mtn_bj et moov_bj partout: hors du Benin, le client ne pouvait
+      // meme pas choisir son pays sur la page de paiement.
+      methods: methodsFor(zone.country)
     });
 
     if (!paymentResult.success) {
@@ -284,6 +307,11 @@ async function handleMonerooWebhook(req, res, next) {
         );
       }
 
+      // La methode reellement choisie par le client (mtn_bj, wave_ci...):
+      // la comptabilite affichait jusqu'ici « MTN MoMo Benin » pour tout le
+      // monde, y compris pour une vente ivoirienne.
+      const paymentMethod = extractPaymentMethod(webhookPayload.data);
+
       // Mettre à jour le statut du paiement
       const { error: updateError } = await supabaseAdmin
         .from('payments')
@@ -291,7 +319,8 @@ async function handleMonerooWebhook(req, res, next) {
           status: 'completed',
           completed_at: new Date().toISOString(),
           transaction_id: webhookPayload.data?.capture?.gateway?.transaction_id || null,
-          ...(payerPhone ? { phone: payerPhone } : {})
+          ...(payerPhone ? { phone: payerPhone } : {}),
+          ...(paymentMethod ? { payment_method: paymentMethod } : {})
         })
         .eq('id', payment.id);
 
@@ -380,12 +409,18 @@ async function handleMonerooWebhook(req, res, next) {
 async function getPaymentsByPhone(req, res, next) {
   try {
     const digits = String(req.params.phone).replace(/\D/g, '');
-    const phone = digits.length === 8 ? `229${digits}` : digits;
+
+    // Le client tape son numero comme il le connait: parfois en local
+    // (0709179694), parfois en international (2250709179694). On ne sait pas de
+    // quel pays il vient, donc on teste le numero tel quel et prefixe de chaque
+    // indicatif couvert. L'ancienne version n'essayait que 229: un client
+    // ivoirien ne retrouvait jamais son ticket.
+    const candidates = [digits, ...phoneCandidates(digits)];
 
     const { data: payments, error } = await supabaseAdmin
       .from('payments')
-      .select('*, wifi_zones(name, router_ip), pricings(duration_hours, name)')
-      .eq('phone', phone)
+      .select('*, wifi_zones(name, router_ip, manager_phone, country), pricings(duration_hours, name)')
+      .in('phone', candidates)
       .eq('status', 'completed')
       .order('completed_at', { ascending: false })
       .limit(1);

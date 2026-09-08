@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Wifi, Tag, Server, FileText, Phone, Info, Menu } from 'lucide-react';
+import { Wifi, Tag, Server, FileText, Phone, Info, Menu, Globe } from 'lucide-react';
 import { createWifiZone } from '../services/wifiZones';
+import { COUNTRY_LIST, DEFAULT_COUNTRY, getCountry } from '../config/countries';
 import toast from 'react-hot-toast';
 
 export default function CreateWifiZone({ onCancel, onSuccess }) {
@@ -11,6 +12,8 @@ export default function CreateWifiZone({ onCancel, onSuccess }) {
     name: '',
     router_ip: '',
     manager_phone: '',
+    // Determine les moyens de paiement proposes a vos clients
+    country: DEFAULT_COUNTRY,
     address: '', // Description dans l'UI
   });
 
@@ -180,6 +183,31 @@ export default function CreateWifiZone({ onCancel, onSuccess }) {
                 </p>
               </div>
 
+              {/* Pays: commande les moyens de paiement proposes au client */}
+              <div>
+                <label className="flex items-center space-x-2 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 md:mb-2">
+                  <Globe size={16} />
+                  <span>Pays de la zone</span>
+                </label>
+                <select
+                  name="country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  className="input text-sm md:text-base"
+                  required
+                >
+                  {COUNTRY_LIST.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Détermine les moyens de paiement proposés à vos clients (MTN, Moov,
+                  Orange, Wave selon le pays).
+                </p>
+              </div>
+
               {/* Votre contact */}
               <div>
                 <label className="flex items-center space-x-2 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 md:mb-2">
@@ -191,7 +219,7 @@ export default function CreateWifiZone({ onCancel, onSuccess }) {
                   name="manager_phone"
                   value={formData.manager_phone}
                   onChange={handleChange}
-                  placeholder="Ex: +229 70 00 00 00"
+                  placeholder={`Ex: +${getCountry(formData.country).dialCode} ${getCountry(formData.country).placeholder}`}
                   className="input text-sm md:text-base"
                   required
                 />

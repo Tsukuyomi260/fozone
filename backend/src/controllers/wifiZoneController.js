@@ -39,7 +39,9 @@ async function getPublicZoneById(req, res, next) {
 
     const { data: zone, error } = await supabaseAdmin
       .from('wifi_zones')
-      .select('id, name')
+      // country et manager_phone sont publics a dessein: la page d'achat en a
+      // besoin pour completer le numero du client et afficher a qui s'adresser.
+      .select('id, name, country, manager_phone')
       .eq('id', id)
       .single();
 
@@ -90,7 +92,7 @@ async function getZoneById(req, res, next) {
  */
 async function createZone(req, res, next) {
   try {
-    const { name, router_ip, manager_phone, latitude, longitude, address } = req.body;
+    const { name, router_ip, manager_phone, country, latitude, longitude, address } = req.body;
 
     const { data: zone, error } = await supabaseAdmin
       .from('wifi_zones')
@@ -98,6 +100,9 @@ async function createZone(req, res, next) {
         name: name,
         router_ip: router_ip,
         manager_phone: manager_phone,
+        // Determine les moyens de paiement proposes au client et l'indicatif
+        // ajoute a son numero.
+        country: country || 'BJ',
         latitude: latitude || null,
         longitude: longitude || null,
         address: address || null,
@@ -131,7 +136,7 @@ async function createZone(req, res, next) {
 async function updateZone(req, res, next) {
   try {
     const { id } = req.params;
-    const { name, router_ip, manager_phone, latitude, longitude, address } = req.body;
+    const { name, router_ip, manager_phone, country, latitude, longitude, address } = req.body;
 
     // Vérifier que la zone appartient à l'utilisateur
     const { data: existingZone } = await supabaseAdmin
@@ -151,6 +156,7 @@ async function updateZone(req, res, next) {
     if (name !== undefined) updateData.name = name;
     if (router_ip !== undefined) updateData.router_ip = router_ip;
     if (manager_phone !== undefined) updateData.manager_phone = manager_phone;
+    if (country !== undefined) updateData.country = country;
     if (latitude !== undefined) updateData.latitude = latitude;
     if (longitude !== undefined) updateData.longitude = longitude;
     if (address !== undefined) updateData.address = address;

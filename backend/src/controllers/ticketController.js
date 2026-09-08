@@ -289,13 +289,22 @@ async function deleteTicket(req, res, next) {
     // Récupérer le ticket pour vérifier qu'il existe
     const { data: ticket, error: ticketError } = await supabaseAdmin
       .from('tickets')
-      .select('id, wifi_zone_id')
+      .select('id, wifi_zone_id, status')
       .eq('id', ticketId)
       .single();
 
     if (ticketError || !ticket) {
       return res.status(404).json({
         error: 'Ticket not found'
+      });
+    }
+
+    // Un ticket vendu est la preuve de la vente: la comptabilite le relie au
+    // paiement par payment_id. Le supprimer ferait disparaitre les identifiants
+    // remis au client.
+    if (ticket.status === 'sold') {
+      return res.status(409).json({
+        error: 'Ce ticket a deja ete vendu et ne peut pas etre supprime.'
       });
     }
 
@@ -355,11 +364,13 @@ async function deleteAllTickets(req, res, next) {
       });
     }
 
-    // Supprimer tous les tickets de la zone
+    // Supprimer les tickets non vendus de la zone. Les tickets vendus restent:
+    // sans eux, la comptabilite ne peut plus montrer le ticket remis au client.
     const { data: deletedTickets, error } = await supabaseAdmin
       .from('tickets')
       .delete()
       .eq('wifi_zone_id', zoneId)
+      .neq('status', 'sold')
       .select('id');
 
     if (error) {

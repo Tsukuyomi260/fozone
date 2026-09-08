@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getWifiZoneById, updateWifiZone, deleteWifiZone } from '../services/wifiZones';
+import { COUNTRY_LIST, DEFAULT_COUNTRY, getCountry } from '../config/countries';
 import toast from 'react-hot-toast';
 import { getFrontendUrl } from '../config/env';
 import { Skeleton, SkeletonCard, SkeletonHeader } from '../components/Skeleton';
@@ -33,6 +34,7 @@ export default function WifiZoneDetail() {
     name: '',
     router_ip: '',
     manager_phone: '',
+    country: DEFAULT_COUNTRY,
     address: '',
     latitude: '',
     longitude: ''
@@ -50,6 +52,7 @@ export default function WifiZoneDetail() {
         name: response.zone.name || '',
         router_ip: response.zone.router_ip || '',
         manager_phone: response.zone.manager_phone || '',
+        country: response.zone.country || DEFAULT_COUNTRY,
         address: response.zone.address || '',
         latitude: response.zone.latitude || '',
         longitude: response.zone.longitude || ''
@@ -69,6 +72,7 @@ export default function WifiZoneDetail() {
         name: editForm.name,
         router_ip: editForm.router_ip,
         manager_phone: editForm.manager_phone,
+        country: editForm.country,
         address: editForm.address || null,
         latitude: editForm.latitude ? parseFloat(editForm.latitude) : null,
         longitude: editForm.longitude ? parseFloat(editForm.longitude) : null
@@ -324,6 +328,27 @@ export default function WifiZoneDetail() {
                   className="input w-full"
                   required
                 />
+              </div>
+              <div>
+                <label htmlFor="country" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Pays de la zone *
+                </label>
+                <select
+                  id="country"
+                  value={editForm.country}
+                  onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
+                  className="input w-full"
+                  required
+                >
+                  {COUNTRY_LIST.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Commande les moyens de paiement proposés à vos clients.
+                </p>
               </div>
               <div>
                 <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

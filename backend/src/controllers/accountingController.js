@@ -5,6 +5,7 @@
 
 const { supabaseAdmin } = require('../config/database');
 const logger = require('../config/logger');
+const { methodLabel } = require('../config/countries');
 
 // Le promoteur ne supporte qu'un seul prelevement: les 5 % de la plateforme.
 // La commission agregateur est un cout de Fo-Zone, incluse dans ces 5 %,
@@ -217,7 +218,7 @@ async function getPaymentHistory(req, res, next) {
       .from('payments')
       .select(`
         *,
-        wifi_zones(id, name),
+        wifi_zones(id, name, country),
         pricings(amount, name)
       `)
       .in('wifi_zone_id', zoneIds)
@@ -333,7 +334,10 @@ async function getPaymentHistory(req, res, next) {
         // supprimee depuis la vente (voir migration 007).
         pricing_name: payment.pricing_name || payment.pricings?.name || null,
         zone_name: payment.wifi_zones?.name || 'N/A',
-        network: 'MTN MoMo Benin', // À récupérer depuis Moneroo si disponible
+        // Methode reellement utilisee, renvoyee par Moneroo (migration 014).
+        // Avant, toutes les lignes affichaient « MTN MoMo Benin », y compris
+        // une vente ivoirienne.
+        network: methodLabel(payment.payment_method, payment.wifi_zones?.country),
         ticket: ticketsMap[payment.id]?.[0] || null
       };
     }) || [];
@@ -390,7 +394,7 @@ async function exportPaymentHistoryCSV(req, res, next) {
       .from('payments')
       .select(`
         *,
-        wifi_zones(id, name),
+        wifi_zones(id, name, country),
         pricings(amount, name)
       `)
       .in('wifi_zone_id', zoneIds)
@@ -466,7 +470,7 @@ async function exportPaymentHistoryCSV(req, res, next) {
         `${commission.toFixed(2)} XOF`,
         payment.moneroo_payment_id || 'N/A',
         date,
-        'MTN MoMo Benin',
+        methodLabel(payment.payment_method, payment.wifi_zones?.country),
         payment.phone || 'N/A'
       ];
     }) || [];

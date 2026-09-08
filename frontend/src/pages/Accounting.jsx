@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getWifiZones } from '../services/wifiZones';
 import { getPaymentStats, getTicketsSoldStats, getPaymentHistory, exportPaymentHistoryCSV } from '../services/accounting';
 import toast from 'react-hot-toast';
@@ -21,8 +21,114 @@ import {
   Search, 
   Eye,
   Filter,
-  Clock
+  Clock,
+  Copy
 } from 'lucide-react';
+
+/**
+ * Oeil de la colonne Ticket: les identifiants s'affichent au survol, et un clic
+ * les garde ouverts (utile sur mobile, ou pour copier sans perdre le survol).
+ */
+function TicketPeek({ ticket }) {
+  const [pinned, setPinned] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [pos, setPos] = useState(null);
+  const ref = useRef(null);
+  const btnRef = useRef(null);
+
+  useEffect(() => {
+    if (!pinned) return;
+    const close = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setPinned(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [pinned]);
+
+  const copy = (value, label) => {
+    navigator.clipboard?.writeText(value)
+      .then(() => toast.success(`${label} copie`))
+      .catch(() => toast.error('Copie impossible'));
+  };
+
+  const open = pinned || hovered;
+
+  // Le tableau defile horizontalement (overflow-x-auto), ce qui couperait un
+  // popover en position absolue: on le place en fixed sous l'icone, et on le
+  // referme au defilement pour qu'il ne flotte pas loin de sa ligne.
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const r = btnRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const width = 224;
+      const below = window.innerHeight - r.bottom > 150;
+      setPos({
+        left: Math.max(8, Math.min(r.right - width, window.innerWidth - width - 8)),
+        top: below ? r.bottom : undefined,
+        bottom: below ? undefined : window.innerHeight - r.top
+      });
+    };
+    place();
+    const hide = () => { setPinned(false); setHovered(false); };
+    window.addEventListener('scroll', hide, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', hide, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [open]);
+
+  return (
+    <div
+      ref={ref}
+      className="relative inline-block"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setPinned(p => !p)}
+        aria-label="Voir le ticket"
+        aria-expanded={open}
+        className={`text-lime-600 dark:text-lime-400 hover:text-green-700 dark:hover:text-green-300 transition-all p-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 hover:scale-110 ${pinned ? 'bg-green-50 dark:bg-green-900/20' : ''}`}
+      >
+        <Eye size={18} strokeWidth={2} />
+      </button>
+      {open && pos && (
+        // Espacement en padding, pas en marge: la souris passe de l'icone au
+        // popover sans traverser de vide, donc sans le refermer.
+        <div className="fixed z-50 py-1" style={{ left: pos.left, top: pos.top, bottom: pos.bottom }}>
+          <div className="w-56 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-lg p-3 text-left">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+              Ticket attribue
+            </p>
+            {[
+              ['Utilisateur', ticket.username],
+              ['Mot de passe', ticket.password]
+            ].map(([label, value]) => (
+              <div key={label} className="flex items-center justify-between gap-2 py-1">
+                <div className="min-w-0">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">{label}</p>
+                  <p className="font-mono text-sm text-gray-900 dark:text-white truncate">{value}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copy(value, label)}
+                  className="shrink-0 p-1 rounded-md text-gray-400 hover:text-lime-600 hover:bg-gray-100 dark:hover:bg-white/10"
+                  aria-label={`Copier ${label.toLowerCase()}`}
+                >
+                  <Copy size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Accounting() {
   const [paymentStats, setPaymentStats] = useState([]);
@@ -543,19 +649,21 @@ export default function Accounting() {
                         {formatDate(payment.completed_at || payment.created_at)}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                        {payment.network || 'MTN MoMo Benin'}
+                        {payment.network || 'Mobile Money'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                         {payment.phone || 'N/A'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm">
-                        {payment.ticket && (
-                          <button
-                            className="text-lime-600 dark:text-lime-400 hover:text-green-700 dark:hover:text-green-300 transition-all p-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 hover:scale-110"
-                            title={`Username: ${payment.ticket.username}, Password: ${payment.ticket.password}`}
+                        {payment.ticket ? (
+                          <TicketPeek ticket={payment.ticket} />
+                        ) : (
+                          <span
+                            className="text-gray-400 dark:text-gray-600"
+                            title="Aucun ticket relie a ce paiement"
                           >
-                            <Eye size={18} strokeWidth={2} />
-                          </button>
+                            —
+                          </span>
                         )}
                       </td>
                     </tr>
