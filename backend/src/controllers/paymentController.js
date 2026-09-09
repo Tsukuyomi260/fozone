@@ -143,7 +143,9 @@ async function createPaymentIntent(req, res, next) {
         moneroo_payment_id: paymentResult.paymentId,
         wifi_zone_id: wifi_zone_id,
         amount: finalAmount,
-        phone: customer?.phone || 'N/A', // Valeur par défaut (sera NULL après migration 006)
+        // Meme forme que ce qui part chez Moneroo, sinon la recherche de ticket
+        // par numero compare deux ecritures differentes du meme numero.
+        phone: customer?.phone ? normalizePhone(customer.phone, zone.country) : 'N/A',
         pricing_id: pricing_id || null,
         // Copie du tarif au moment de la vente: la comptabilite ne doit pas
         // dependre d'une ligne pricings que le gerant peut supprimer ensuite.
