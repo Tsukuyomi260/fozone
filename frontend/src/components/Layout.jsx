@@ -1,9 +1,10 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef, Suspense } from 'react';
 import PageFallback from './PageFallback';
-import { Moon, Sun, Menu, X, Wifi, Home, DollarSign, Ticket, FileText, LogOut, Settings, Search, X as XIcon, ChevronLeft, ChevronDown, Wallet, Router } from 'lucide-react';
+import { Moon, Sun, Menu, X, Wifi, Home, DollarSign, Ticket, FileText, LogOut, Settings, Search, X as XIcon, ChevronLeft, ChevronDown, Wallet, Router, Bell, AlertTriangle } from 'lucide-react';
 import { logout, getCurrentUser } from '../services/auth';
 import { useTheme } from '../services/theme';
+import { getStockAlerts } from '../services/tickets';
 import Logo from './Logo';
 
 export default function Layout() {
@@ -29,9 +30,29 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [stockAlerts, setStockAlerts] = useState([]);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+
   useEffect(() => {
     setUser(getCurrentUser());
   }, []);
+
+  // Stock bas: recharge a chaque changement de page plutot qu'en boucle.
+  // Un promoteur qui navigue voit l'alerte sans qu'on interroge le serveur
+  // toutes les trente secondes.
+  useEffect(() => {
+    let annule = false;
+    getStockAlerts()
+      .then((r) => {
+        if (!annule) setStockAlerts(r.alerts || []);
+      })
+      .catch(() => {
+        // Une alerte indisponible ne doit pas casser la navigation
+      });
+    return () => {
+      annule = true;
+    };
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -407,6 +428,78 @@ export default function Layout() {
 
           {/* Actions */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Stock de tickets bientot epuise */}
+            <div className="relative">
+              <button
+                onClick={() => setAlertsOpen((v) => !v)}
+                className={`${iconBtn} relative`}
+                title="Alertes de stock"
+                aria-haspopup="true"
+                aria-expanded={alertsOpen}
+              >
+                <Bell size={18} strokeWidth={2} />
+                {stockAlerts.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-amber-500 text-[10px] font-bold text-white flex items-center justify-center">
+                    {stockAlerts.length}
+                  </span>
+                )}
+              </button>
+
+              {alertsOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setAlertsOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <div className="absolute right-0 mt-2 w-72 z-50 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-xl dark:shadow-black/40 p-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-600 px-1 pb-2">
+                      Stock de tickets
+                    </p>
+
+                    {stockAlerts.length === 0 ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 px-1 py-2">
+                        Tous vos forfaits ont du stock.
+                      </p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {stockAlerts.map((a) => (
+                          <li key={a.pricing_id}>
+                            <Link
+                              to="/tickets"
+                              onClick={() => setAlertsOpen(false)}
+                              className="flex items-start gap-2.5 px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors"
+                            >
+                              <AlertTriangle
+                                size={15}
+                                strokeWidth={2.5}
+                                className={`mt-0.5 flex-shrink-0 ${
+                                  a.available === 0
+                                    ? 'text-red-500'
+                                    : 'text-amber-500'
+                                }`}
+                              />
+                              <span className="min-w-0">
+                                <span className="block text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                  {a.pricing_name}
+                                </span>
+                                <span className="block text-xs text-gray-500 dark:text-gray-400 truncate">
+                                  {a.zone_name} ·{' '}
+                                  {a.available === 0
+                                    ? 'épuisé'
+                                    : `${a.available} ticket${a.available > 1 ? 's' : ''} restant${a.available > 1 ? 's' : ''}`}
+                                </span>
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
             <button
               onClick={toggleDarkMode}
               className={iconBtn}

@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { param, query } = require('express-validator');
+const { param, query, body } = require('express-validator');
 const ticketController = require('../controllers/ticketController');
 const { authenticateToken } = require('../middleware/auth');
 const validate = require('../middleware/validator');
@@ -30,6 +30,22 @@ const zoneIdValidation = [
 ];
 
 router.use(authenticateToken);
+
+// Tarifs bientot en rupture, toutes zones confondues. Avant /:ticketId,
+// sinon 'alerts' serait pris pour un identifiant de ticket.
+router.get('/alerts', ticketController.getStockAlerts);
+
+// Rattache un profil MikroTik a un tarif, pour le stock encore invendable
+router.put(
+  '/zone/:zoneId/link-profile',
+  zoneIdValidation,
+  [
+    body('pricing_id').isUUID(),
+    body('profile').optional({ nullable: true }).trim().isLength({ max: 255 })
+  ],
+  validate,
+  ticketController.linkProfileToPricing
+);
 
 // Routes spécifiques pour un ticket (doivent être définies AVANT les routes /zone/:zoneId)
 const ticketIdValidation = [

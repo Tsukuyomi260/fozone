@@ -96,6 +96,24 @@ async function createPaymentIntent(req, res, next) {
       });
     }
 
+    // Stock du tarif avant tout encaissement. Sans ce controle, le client
+    // payait, l'argent etait pris, et aucun ticket ne pouvait lui etre remis.
+    const { count: availableTickets } = await supabaseAdmin
+      .from('tickets')
+      .select('id', { count: 'exact', head: true })
+      .eq('wifi_zone_id', wifi_zone_id)
+      .eq('pricing_id', pricing.id)
+      .eq('status', 'free');
+
+    if (!availableTickets || availableTickets < 1) {
+      logger.warn(`Sold out: zone ${wifi_zone_id} pricing ${pricing.id} (${pricing.name})`);
+      return res.status(409).json({
+        error: 'Ce forfait est épuisé pour le moment',
+        pricing_id: pricing.id,
+        available: 0
+      });
+    }
+
     const finalAmount = parseFloat(pricing.amount);
 
     // Construire l'URL de retour (où le client sera redirigé après paiement)
@@ -334,7 +352,8 @@ async function handleMonerooWebhook(req, res, next) {
       // Attribuer un ticket de manière atomique
       const ticketAssignment = await assignTicketAtomically(
         payment.wifi_zone_id,
-        payment.id
+        payment.id,
+        payment.pricing_id
       );
 
       if (!ticketAssignment.success) {

@@ -73,6 +73,12 @@ export default function BuyTicket() {
       return;
     }
 
+    const chosen = pricings.find((p) => p.id === selectedPricing);
+    if (chosen && chosen.available === 0) {
+      toast.error('Ce forfait est épuisé');
+      return;
+    }
+
     if (!phoneIsValid) {
       toast.error('Veuillez saisir un numéro de téléphone valide');
       return;
@@ -163,12 +169,28 @@ export default function BuyTicket() {
                 required
               >
                 <option value="">-- Sélectionnez un tarif --</option>
-                {pricings.map((pricing) => (
-                  <option key={pricing.id} value={pricing.id}>
-                    {formatPricingLabel(pricing)}
-                  </option>
-                ))}
+                {pricings.map((pricing) => {
+                  // Un forfait sans ticket libre ne peut pas etre vendu: le
+                  // proposer reviendrait a encaisser sans rien livrer.
+                  //
+                  // Zero explicite seulement: si le backend n'est pas encore
+                  // deploye il ne renvoie pas `available`, et tout grisier
+                  // bloquerait les ventes pendant la fenetre de deploiement.
+                  const soldOut = pricing.available === 0;
+                  return (
+                    <option key={pricing.id} value={pricing.id} disabled={soldOut}>
+                      {formatPricingLabel(pricing)}
+                      {soldOut ? ' — Épuisé' : ''}
+                    </option>
+                  );
+                })}
               </select>
+              {pricings.length > 0 && pricings.every((p) => p.available === 0) && (
+                <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">
+                  Tous les forfaits sont momentanément épuisés. Contactez le gérant
+                  ci-dessous.
+                </p>
+              )}
             </div>
 
             {/* Numéro de téléphone */}

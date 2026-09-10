@@ -55,6 +55,25 @@ export async function getTicketStats(zoneId) {
 }
 
 /**
+ * Tarifs dont le stock de tickets est bas, toutes zones confondues.
+ * Alimente la cloche de notification.
+ */
+export async function getStockAlerts() {
+  return api.get('/tickets/alerts');
+}
+
+/**
+ * Rattache tous les tickets libres d'un profil MikroTik à un tarif.
+ * Sans tarif, un ticket n'est vendable par aucun forfait.
+ */
+export async function linkProfileToPricing(zoneId, profile, pricingId) {
+  return api.put(`/tickets/zone/${zoneId}/link-profile`, {
+    profile,
+    pricing_id: pricingId,
+  });
+}
+
+/**
  * Supprime un ticket spécifique
  */
 export async function deleteTicket(ticketId) {

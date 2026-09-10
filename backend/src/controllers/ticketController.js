@@ -7,6 +7,7 @@ const csv = require('csv-parser');
 const { Readable } = require('stream');
 const { supabaseAdmin } = require('../config/database');
 const logger = require('../config/logger');
+const { LOW_STOCK_THRESHOLD } = require('../config/stock');
 
 /**
  * Récupère tous les tickets d'une zone Wi-Fi
@@ -151,20 +152,30 @@ async function importTickets(req, res, next) {
       });
     }
 
-    // Si pricing_id est fourni, vérifier qu'il existe et appartient à la zone
-    if (pricing_id) {
-      const { data: pricing, error: pricingError } = await supabaseAdmin
-        .from('pricings')
-        .select('id, wifi_zone_id')
-        .eq('id', pricing_id)
-        .eq('wifi_zone_id', zoneId)
-        .single();
+    // Un ticket sans tarif n'est plus vendable (migration 015): on determine
+    // donc le tarif de chaque ligne avant l'insertion.
+    //
+    // Priorite au tarif choisi dans le formulaire; sinon correspondance entre
+    // la colonne Profile du CSV et le profil declare sur le tarif.
+    const { data: zonePricings } = await supabaseAdmin
+      .from('pricings')
+      .select('id, name, ticket_profile')
+      .eq('wifi_zone_id', zoneId);
 
-      if (pricingError || !pricing) {
+    let forcedPricingId = null;
+    if (pricing_id) {
+      const match = (zonePricings || []).find((p) => p.id === pricing_id);
+      if (match) {
+        forcedPricingId = match.id;
+      } else {
         logger.warn(`Pricing ${pricing_id} not found or doesn't belong to zone ${zoneId}`);
-        // On continue quand même sans pricing_id
       }
     }
+
+    const byProfile = new Map();
+    (zonePricings || []).forEach((p) => {
+      if (p.ticket_profile) byProfile.set(p.ticket_profile.trim().toLowerCase(), p.id);
+    });
 
     const tickets = [];
     const errors = [];
@@ -181,18 +192,21 @@ async function importTickets(req, res, next) {
           const password = row.Password || row.password;
 
           if (username && password) {
+            const profile = (row.Profile || row.profile || row.profile_name || '').trim() || null;
+
             const ticketData = {
               wifi_zone_id: zoneId,
               username: username.trim(),
               password: password.trim(),
-              profile: (row.Profile || row.profile || row.profile_name || '').trim() || null,
+              profile: profile,
+              // Sans tarif, le ticket ne pourra etre vendu par aucun forfait:
+              // la reponse d'import le signale au promoteur.
+              pricing_id:
+                forcedPricingId ||
+                (profile ? byProfile.get(profile.toLowerCase()) || null : null),
               status: 'free',
               created_at: new Date().toISOString()
             };
-
-            // Ajouter pricing_id si fourni (optionnel, pour référence future)
-            // Note: On ne stocke pas pricing_id dans tickets car ce n'est pas dans le schéma
-            // Mais on peut l'utiliser pour d'autres traitements si nécessaire
 
             tickets.push(ticketData);
           } else {
@@ -222,11 +236,21 @@ async function importTickets(req, res, next) {
               });
             }
 
-            logger.info(`Imported ${insertedTickets.length} tickets for zone ${zoneId}`);
+            const unlinked = insertedTickets.filter((t) => !t.pricing_id);
+
+            logger.info(
+              `Imported ${insertedTickets.length} tickets for zone ${zoneId}` +
+              (unlinked.length ? ` (${unlinked.length} sans tarif)` : '')
+            );
 
             res.status(201).json({
               message: 'Tickets imported successfully',
               imported: insertedTickets.length,
+              linked: insertedTickets.length - unlinked.length,
+              // Un ticket sans tarif ne sera vendu par aucun forfait: le
+              // promoteur doit rattacher son profil depuis la page Tickets.
+              unlinked: unlinked.length,
+              unlinked_profiles: [...new Set(unlinked.map((t) => t.profile || 'sans profil'))],
               errors: errors.length > 0 ? errors : undefined,
               tickets: insertedTickets
             });
@@ -389,10 +413,140 @@ async function deleteAllTickets(req, res, next) {
   }
 }
 
+/**
+ * Rattache tous les tickets libres d'un profil MikroTik a un tarif.
+ *
+ * Sert au stock importe avant que le lien tarif/ticket n'existe, et a tout
+ * import dont le profil n'etait pas encore declare. Le profil est aussi
+ * memorise sur le tarif: les imports suivants se rattachent seuls.
+ */
+async function linkProfileToPricing(req, res, next) {
+  try {
+    const { zoneId } = req.params;
+    const { profile, pricing_id } = req.body;
+
+    const { data: zone } = await supabaseAdmin
+      .from('wifi_zones')
+      .select('id')
+      .eq('id', zoneId)
+      .eq('owner_id', req.user.ownerId)
+      .single();
+
+    if (!zone) {
+      return res.status(404).json({ error: 'Wi-Fi zone not found' });
+    }
+
+    const { data: pricing } = await supabaseAdmin
+      .from('pricings')
+      .select('id, name')
+      .eq('id', pricing_id)
+      .eq('wifi_zone_id', zoneId)
+      .single();
+
+    if (!pricing) {
+      return res.status(404).json({ error: 'Tarif introuvable pour cette zone' });
+    }
+
+    // Seuls les tickets libres sont deplaces: un ticket deja vendu garde le
+    // tarif reellement paye par son client.
+    let query = supabaseAdmin
+      .from('tickets')
+      .update({ pricing_id: pricing.id, updated_at: new Date().toISOString() })
+      .eq('wifi_zone_id', zoneId)
+      .eq('status', 'free')
+      .is('pricing_id', null);
+
+    query = profile ? query.eq('profile', profile) : query.is('profile', null);
+
+    const { data: updated, error } = await query.select('id');
+
+    if (error) {
+      logger.error('Error linking profile to pricing:', error);
+      return res.status(400).json({ error: 'Rattachement impossible', details: error.message });
+    }
+
+    // Memoriser le profil sur le tarif pour les imports suivants
+    if (profile) {
+      await supabaseAdmin
+        .from('pricings')
+        .update({ ticket_profile: profile })
+        .eq('id', pricing.id);
+    }
+
+    logger.info(
+      `Linked ${updated?.length || 0} tickets (profile ${profile || 'sans profil'}) to pricing ${pricing.id}`
+    );
+
+    res.json({
+      message: `${updated?.length || 0} ticket(s) rattaché(s) au tarif ${pricing.name}`,
+      linked: updated?.length || 0
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Tarifs dont le stock de tickets libres est bas, toutes zones du promoteur.
+ * Alimente la cloche de notification: sans elle, une rupture ne se decouvre
+ * qu'au moment ou un client ne peut plus acheter.
+ */
+async function getStockAlerts(req, res, next) {
+  try {
+    const { data: zones } = await supabaseAdmin
+      .from('wifi_zones')
+      .select('id, name')
+      .eq('owner_id', req.user.ownerId);
+
+    if (!zones || zones.length === 0) {
+      return res.json({ threshold: LOW_STOCK_THRESHOLD, alerts: [] });
+    }
+
+    const zoneIds = zones.map((z) => z.id);
+    const zoneName = Object.fromEntries(zones.map((z) => [z.id, z.name]));
+
+    const [{ data: pricings }, { data: freeTickets }] = await Promise.all([
+      supabaseAdmin
+        .from('pricings')
+        .select('id, name, amount, wifi_zone_id')
+        .in('wifi_zone_id', zoneIds)
+        .eq('is_active', true),
+      supabaseAdmin
+        .from('tickets')
+        .select('pricing_id')
+        .in('wifi_zone_id', zoneIds)
+        .eq('status', 'free')
+    ]);
+
+    const stock = {};
+    (freeTickets || []).forEach((t) => {
+      if (t.pricing_id) stock[t.pricing_id] = (stock[t.pricing_id] || 0) + 1;
+    });
+
+    const alerts = (pricings || [])
+      .map((p) => ({
+        pricing_id: p.id,
+        pricing_name: p.name,
+        amount: parseFloat(p.amount),
+        zone_id: p.wifi_zone_id,
+        zone_name: zoneName[p.wifi_zone_id] || '',
+        available: stock[p.id] || 0
+      }))
+      .filter((a) => a.available <= LOW_STOCK_THRESHOLD)
+      .sort((a, b) => a.available - b.available);
+
+    res.json({ threshold: LOW_STOCK_THRESHOLD, alerts });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getTicketsByZone,
   importTickets,
   getTicketStats,
+  getStockAlerts,
+  linkProfileToPricing,
   deleteTicket,
   deleteAllTickets
 };

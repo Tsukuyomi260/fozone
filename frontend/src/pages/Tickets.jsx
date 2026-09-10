@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getWifiZones } from '../services/wifiZones';
 import { getPricingsByZone } from '../services/pricings';
-import { importTickets, getTicketsByZone, getTicketStats, deleteTicket, deleteAllTickets } from '../services/tickets';
+import { importTickets, getTicketsByZone, getTicketStats, deleteTicket, deleteAllTickets, linkProfileToPricing } from '../services/tickets';
 import toast from 'react-hot-toast';
 import { SkeletonHeader, SkeletonTable } from '../components/Skeleton';
 import { 
@@ -21,7 +21,8 @@ import {
   Users,
   Filter,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function Tickets() {
@@ -36,6 +37,9 @@ export default function Tickets() {
   const [showList, setShowList] = useState(false);
   const [tickets, setTickets] = useState([]);
   const [stats, setStats] = useState(null);
+  // Rattachement des profils importes sans tarif
+  const [linkChoice, setLinkChoice] = useState({});
+  const [linking, setLinking] = useState(null);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [loadingStats, setLoadingStats] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
@@ -110,6 +114,26 @@ export default function Tickets() {
     }
   };
 
+  // Rattache tous les tickets libres d'un profil au tarif choisi. Tant que ce
+  // lien n'existe pas, ces tickets ne peuvent etre vendus par aucun forfait.
+  const handleLinkProfile = async (profile) => {
+    const pricingId = linkChoice[profile];
+    if (!pricingId) return;
+
+    setLinking(profile);
+    try {
+      const response = await linkProfileToPricing(listZoneId, profile, pricingId);
+      toast.success(response.message);
+      setLinkChoice({ ...linkChoice, [profile]: '' });
+      await loadTicketStats(listZoneId);
+      await loadTickets(listZoneId);
+    } catch (error) {
+      toast.error(error.message || 'Rattachement impossible');
+    } finally {
+      setLinking(null);
+    }
+  };
+
   const loadTicketStats = async (zoneId) => {
     setLoadingStats(true);
     try {
@@ -151,6 +175,15 @@ export default function Tickets() {
     try {
       const response = await importTickets(selectedZone, csvFile, selectedPricing || null);
       toast.success(`${response.imported || 0} ticket(s) importé(s) avec succès !`);
+
+      // Un ticket sans tarif ne sera vendu par aucun forfait: le signaler tout
+      // de suite plutot que de laisser le promoteur croire son stock en ligne.
+      if (response.unlinked > 0) {
+        toast.error(
+          `${response.unlinked} ticket(s) sans tarif (${(response.unlinked_profiles || []).join(', ')}) : rattachez-les pour les vendre.`,
+          { duration: 8000 }
+        );
+      }
       
       // Réinitialiser le formulaire
       setCsvFile(null);
@@ -297,6 +330,115 @@ export default function Tickets() {
           })}
         </div>
       )}
+      {/* Stock par tarif: un total de tickets libres ne dit rien si un forfait
+          est en rupture pendant qu'un autre est plein. */}
+      {showList && selectedZone && stats?.by_pricing?.length > 0 && (
+        <div className={`${card} p-5 md:p-6`}>
+          <h2 className="text-base font-bold text-gray-900 dark:text-white tracking-tight mb-1">
+            Stock par tarif
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
+            Un forfait sans ticket est affiché « Épuisé » sur la page d'achat
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {stats.by_pricing.map((p) => (
+              <div
+                key={p.pricing_id}
+                className={`rounded-xl border p-4 ${
+                  p.free === 0
+                    ? 'border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10'
+                    : p.free <= 10
+                    ? 'border-amber-200 dark:border-amber-400/30 bg-amber-50 dark:bg-amber-400/10'
+                    : 'border-gray-200 dark:border-white/10'
+                }`}
+              >
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                  {p.name}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {p.amount.toLocaleString()} XOF
+                </p>
+                <p
+                  className={`mt-3 text-2xl font-bold leading-none ${
+                    p.free === 0
+                      ? 'text-red-600 dark:text-red-400'
+                      : p.free <= 10
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-gray-900 dark:text-white'
+                  }`}
+                >
+                  {p.free}
+                  <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 ml-1.5">
+                    {p.free === 0 ? 'épuisé' : 'libres'}
+                  </span>
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tickets importes sans tarif: invendables tant qu'ils ne sont pas
+          rattaches a un forfait. */}
+      {showList && selectedZone && stats?.unlinked?.length > 0 && (
+        <div className={`${card} p-5 md:p-6 border-amber-200 dark:border-amber-400/30`}>
+          <div className="flex items-start gap-3">
+            <AlertTriangle
+              size={18}
+              strokeWidth={2.5}
+              className="mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400"
+            />
+            <div className="min-w-0 w-full">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
+                Tickets non vendables
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4">
+                Ces tickets n'appartiennent à aucun tarif : aucun client ne peut les
+                acheter. Choisissez leur forfait.
+              </p>
+
+              <div className="space-y-2.5">
+                {stats.unlinked.map((u) => (
+                  <div
+                    key={u.profile}
+                    className="flex flex-wrap items-center gap-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.03] p-3"
+                  >
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {u.profile}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {u.count} ticket{u.count > 1 ? 's' : ''}
+                    </span>
+                    <select
+                      value={linkChoice[u.profile] || ''}
+                      onChange={(e) =>
+                        setLinkChoice({ ...linkChoice, [u.profile]: e.target.value })
+                      }
+                      className="ml-auto h-9 px-3 rounded-lg text-sm bg-white dark:bg-white/[0.06] border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white outline-none focus:border-lime-400/60"
+                    >
+                      <option value="">Choisir un tarif</option>
+                      {pricings.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} — {parseFloat(p.amount).toLocaleString()} XOF
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={!linkChoice[u.profile] || linking === u.profile}
+                      onClick={() => handleLinkProfile(u.profile)}
+                      className="h-9 px-4 rounded-lg text-sm font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {linking === u.profile ? 'Rattachement...' : 'Rattacher'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Formulaire d'import ou Liste des tickets */}
       {!showList ? (
         <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 p-5 md:p-6">

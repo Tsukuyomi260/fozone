@@ -38,8 +38,25 @@ async function getPublicPricingsByZone(req, res, next) {
       throw error;
     }
 
+    // Stock libre par tarif: la page d'achat doit pouvoir griser un forfait
+    // epuise plutot que de laisser payer dans le vide. Une seule requete pour
+    // toute la zone, comptee en memoire.
+    const { data: freeTickets } = await supabaseAdmin
+      .from('tickets')
+      .select('pricing_id')
+      .eq('wifi_zone_id', zoneId)
+      .eq('status', 'free');
+
+    const stock = {};
+    (freeTickets || []).forEach((t) => {
+      if (t.pricing_id) stock[t.pricing_id] = (stock[t.pricing_id] || 0) + 1;
+    });
+
     res.json({
-      pricings: pricings || []
+      pricings: (pricings || []).map((p) => ({
+        ...p,
+        available: stock[p.id] || 0
+      }))
     });
   } catch (error) {
     next(error);
