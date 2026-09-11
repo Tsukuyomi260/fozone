@@ -96,6 +96,99 @@ async function getPaymentStats(req, res, next) {
 }
 
 /**
+ * Repartition des ventes par moyen de paiement.
+ *
+ * Suit les memes filtres que l'historique (zone, dates): le promoteur doit
+ * pouvoir lire « ce mois-ci, sur cette zone », pas un pourcentage fige depuis
+ * le debut. La methode vient de Moneroo a la confirmation du paiement.
+ */
+async function getPaymentMethodStats(req, res, next) {
+  try {
+    const userId = req.user.ownerId;
+    const { startDate, endDate, zoneId } = req.query;
+
+    let zoneIds = [];
+    if (zoneId) {
+      const { data: zone } = await supabaseAdmin
+        .from('wifi_zones')
+        .select('id')
+        .eq('id', zoneId)
+        .eq('owner_id', userId)
+        .single();
+
+      if (!zone) {
+        return res.status(404).json({ error: 'Wi-Fi zone not found' });
+      }
+      zoneIds = [zoneId];
+    } else {
+      const { data: zones } = await supabaseAdmin
+        .from('wifi_zones')
+        .select('id')
+        .eq('owner_id', userId);
+      zoneIds = zones?.map((z) => z.id) || [];
+    }
+
+    if (zoneIds.length === 0) {
+      return res.json({ total: 0, methods: [] });
+    }
+
+    let query = supabaseAdmin
+      .from('payments')
+      .select('payment_method, amount, net_to_tenant, wifi_zones(country)')
+      .in('wifi_zone_id', zoneIds)
+      .eq('status', 'completed');
+
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      query = query.gte('completed_at', start.toISOString());
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      query = query.lte('completed_at', end.toISOString());
+    }
+
+    const { data: payments, error } = await query;
+
+    if (error) {
+      logger.error('Error loading payment method stats:', error);
+      throw error;
+    }
+
+    const parMethode = {};
+    (payments || []).forEach((p) => {
+      // Les ventes anterieures a l'enregistrement de la methode restent
+      // identifiables plutot que d'etre melangees aux autres.
+      const key = p.payment_method || 'inconnu';
+      if (!parMethode[key]) {
+        parMethode[key] = { count: 0, amount: 0, revenue: 0, country: p.wifi_zones?.country };
+      }
+      parMethode[key].count += 1;
+      parMethode[key].amount += parseFloat(p.amount || 0);
+      parMethode[key].revenue += parseFloat(p.net_to_tenant || 0);
+    });
+
+    const total = (payments || []).length;
+
+    const methods = Object.entries(parMethode)
+      .map(([method, v]) => ({
+        method,
+        label: method === 'inconnu' ? 'Non renseigné' : methodLabel(method, v.country),
+        count: v.count,
+        amount: v.amount,
+        revenue: v.revenue,
+        share: total > 0 ? Math.round((v.count / total) * 1000) / 10 : 0
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    res.json({ total, methods });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Récupère les tickets vendus par période (pour graphiques)
  */
 async function getTicketsSoldStats(req, res, next) {
@@ -492,6 +585,7 @@ module.exports = {
   getPaymentStats,
   getTicketsSoldStats,
   getPaymentHistory,
-  exportPaymentHistoryCSV
+  exportPaymentHistoryCSV,
+  getPaymentMethodStats
 };
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getWifiZones } from '../services/wifiZones';
-import { getPaymentStats, getTicketsSoldStats, getPaymentHistory, exportPaymentHistoryCSV } from '../services/accounting';
+import { getPaymentStats, getTicketsSoldStats, getPaymentHistory, getPaymentMethodStats, exportPaymentHistoryCSV } from '../services/accounting';
 import toast from 'react-hot-toast';
 import { Skeleton, SkeletonTable } from '../components/Skeleton';
 import { 
@@ -11,7 +11,10 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  Legend
+  Legend,
+  PieChart,
+  Pie,
+  Cell
 } from 'recharts';
 import { 
   TrendingUp, 
@@ -22,7 +25,8 @@ import {
   Eye,
   Filter,
   Clock,
-  Copy
+  Copy,
+  Smartphone
 } from 'lucide-react';
 
 /**
@@ -130,10 +134,18 @@ function TicketPeek({ ticket }) {
   );
 }
 
+// Couleurs du camembert. Le lime de la marque pour la methode dominante,
+// puis des teintes franchement distinctes: un daltonien doit pouvoir separer
+// les parts, et la legende chiffree reste la pour lever tout doute.
+const METHOD_COLORS = ['#84cc16', '#0ea5e9', '#f59e0b', '#8b5cf6', '#ec4899', '#9ca3af'];
+
 export default function Accounting() {
   const [paymentStats, setPaymentStats] = useState([]);
   const [ticketsStats, setTicketsStats] = useState([]);
   const [payments, setPayments] = useState([]);
+  // Repartition par moyen de paiement: suit les filtres de l'historique
+  const [methodStats, setMethodStats] = useState([]);
+  const [methodTotal, setMethodTotal] = useState(0);
   const [wifiZones, setWifiZones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingPayments, setLoadingPayments] = useState(false);
@@ -167,6 +179,12 @@ export default function Accounting() {
     loadPaymentHistory();
   }, [startDate, endDate, searchTerm, selectedZone, page, limit]);
 
+  // La recherche et la pagination ne changent pas la repartition: seules la
+  // zone et la periode la font bouger.
+  useEffect(() => {
+    loadMethodStats();
+  }, [startDate, endDate, selectedZone]);
+
   const loadZones = async () => {
     try {
       const response = await getWifiZones();
@@ -189,6 +207,21 @@ export default function Accounting() {
       toast.error(error.message || 'Impossible de charger les statistiques');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMethodStats = async () => {
+    try {
+      const params = {};
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      if (selectedZone) params.zoneId = selectedZone;
+
+      const response = await getPaymentMethodStats(params);
+      setMethodStats(response.methods || []);
+      setMethodTotal(response.total || 0);
+    } catch (error) {
+      console.error('[Accounting] Répartition indisponible:', error);
     }
   };
 
@@ -474,6 +507,96 @@ export default function Accounting() {
                 />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      {/* Graphique 3: repartition par moyen de paiement.
+          Place ici, apres les deux graphiques existants et avant l'historique:
+          il suit les memes filtres de zone et de periode. */}
+      <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/30 p-5 md:p-6">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="w-9 h-9 rounded-xl bg-lime-50 dark:bg-lime-400/10 flex items-center justify-center flex-shrink-0">
+            <Smartphone className="text-lime-600 dark:text-lime-400" size={24} strokeWidth={2.5} />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
+              Moyens de paiement
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {methodTotal > 0
+                ? `Sur ${methodTotal} vente${methodTotal > 1 ? 's' : ''}`
+                : 'Aucune vente sur la période'}
+            </p>
+          </div>
+        </div>
+
+        {methodStats.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Aucune vente sur cette période
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={methodStats}
+                    dataKey="count"
+                    nameKey="label"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={95}
+                    paddingAngle={3}
+                    stroke="none"
+                  >
+                    {methodStats.map((m, i) => (
+                      <Cell key={m.method} fill={METHOD_COLORS[i % METHOD_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value, name) => [`${value} vente${value > 1 ? 's' : ''}`, name]}
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                      border: '1px solid #d1fae5',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                      padding: '12px'
+                    }}
+                    labelStyle={{ color: '#84cc16', fontWeight: '600', marginBottom: '4px' }}
+                    itemStyle={{ color: '#374151' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Le chiffre exact a cote du graphique: un camembert seul ne se
+                lit pas precisement. */}
+            <ul className="space-y-3">
+              {methodStats.map((m, i) => (
+                <li key={m.method} className="flex items-center gap-3">
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: METHOD_COLORS[i % METHOD_COLORS.length] }}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {m.label}
+                    </span>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400">
+                      {m.count} vente{m.count > 1 ? 's' : ''} · {m.amount.toLocaleString()} XOF encaissés
+                    </span>
+                  </span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">
+                    {m.share} %
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

@@ -17,12 +17,25 @@ const logger = require('../config/logger');
  * selon la passerelle, d'ou les alternatives.
  */
 function extractPaymentMethod(data) {
+  // capture.method.short_code parle notre langue: 'mtn_bj', 'moov_bj',
+  // 'celtiis_bj'. Verifie sur les ventes reelles.
+  // capture.metadata.selected_payment_method existe aussi mais porte le
+  // vocabulaire interne de la passerelle ('mtn_open', 'moov'), inutilisable.
+  const shortCode = data?.capture?.method?.short_code;
+  if (shortCode) return shortCode;
+
+  return data?.method?.short_code || data?.payment_method || null;
+}
+
+/**
+ * Reference de la transaction chez la passerelle (FedaPay, ...).
+ * Utile pour retrouver un paiement avec leur support.
+ */
+function extractTransactionId(data) {
   return (
-    data?.method ||
-    data?.payment_method ||
-    data?.capture?.method ||
-    data?.capture?.gateway?.method ||
-    data?.capture?.gateway?.name ||
+    data?.capture?.gateway?.transaction_id ||
+    data?.capture?.metadata?.network_transaction_id ||
+    data?.transaction_id ||
     null
   );
 }
@@ -303,34 +316,34 @@ async function handleMonerooWebhook(req, res, next) {
     // Traiter selon le type d'événement Moneroo
     // payment.success, payment.failed, payment.cancelled, payment.initiated
     if (event === 'payment.success' && status === 'success') {
-      // Le numero du payeur n'existe que chez Moneroo: on le recupere ici,
-      // sinon la comptabilite n'affiche que le 'N/A' pose a la creation.
+      // Le numero du payeur, la methode utilisee et la reference de la
+      // passerelle n'existent que chez Moneroo. Le webhook ne transporte PAS
+      // le bloc `capture` qui les contient: tant qu'on s'est contente de lui,
+      // methode et transaction_id sont restes vides sur 213 ventes.
       let payerPhone = extractPayerPhone(webhookPayload.data);
+      let paymentMethod = extractPaymentMethod(webhookPayload.data);
+      let transactionId = extractTransactionId(webhookPayload.data);
 
-      if (!payerPhone) {
-        // Le webhook ne transporte pas le dossier complet: on interroge l'API.
+      if (!payerPhone || !paymentMethod || !transactionId) {
         const verified = await verifyPayment(paymentId);
         if (verified.success) {
-          payerPhone = extractPayerPhone(verified.payment);
+          payerPhone = payerPhone || extractPayerPhone(verified.payment);
+          paymentMethod = paymentMethod || extractPaymentMethod(verified.payment);
+          transactionId = transactionId || extractTransactionId(verified.payment);
         } else {
-          logger.warn(`Could not verify payment ${paymentId} to read payer phone: ${verified.error}`);
+          logger.warn(`Could not verify payment ${paymentId}: ${verified.error}`);
         }
       }
 
-      if (!payerPhone) {
-        // Moneroo ne place pas toujours le numero au meme endroit selon la
-        // passerelle. On journalise le dossier complet une fois pour toutes
-        // afin de reperer le champ exact et cibler l'extraction ensuite.
+      if (!payerPhone || !paymentMethod) {
+        // L'emplacement des champs varie selon la passerelle. On journalise le
+        // dossier complet pour pouvoir cibler l'extraction ensuite.
         logger.warn(
-          'Payer phone not found for ' + paymentId + ' - payload: ' +
+          'Incomplete payment data for ' + paymentId +
+          ' (phone: ' + Boolean(payerPhone) + ', method: ' + Boolean(paymentMethod) + ') - payload: ' +
           JSON.stringify(webhookPayload.data)
         );
       }
-
-      // La methode reellement choisie par le client (mtn_bj, wave_ci...):
-      // la comptabilite affichait jusqu'ici « MTN MoMo Benin » pour tout le
-      // monde, y compris pour une vente ivoirienne.
-      const paymentMethod = extractPaymentMethod(webhookPayload.data);
 
       // Mettre à jour le statut du paiement
       const { error: updateError } = await supabaseAdmin
@@ -338,7 +351,7 @@ async function handleMonerooWebhook(req, res, next) {
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
-          transaction_id: webhookPayload.data?.capture?.gateway?.transaction_id || null,
+          ...(transactionId ? { transaction_id: String(transactionId) } : {}),
           ...(payerPhone ? { phone: payerPhone } : {}),
           ...(paymentMethod ? { payment_method: paymentMethod } : {})
         })

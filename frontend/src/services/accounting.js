@@ -22,6 +22,15 @@ export async function getTicketsSoldStats(params = {}) {
 }
 
 /**
+ * Répartition des ventes par moyen de paiement (MTN, Moov, Celtiis...).
+ * Suit les mêmes filtres que l'historique : zone et période.
+ */
+export async function getPaymentMethodStats(params = {}) {
+  const queryParams = new URLSearchParams(params).toString();
+  return api.get(`/accounting/payment-methods${queryParams ? `?${queryParams}` : ''}`);
+}
+
+/**
  * Récupère l'historique des paiements
  */
 export async function getPaymentHistory(params = {}) {

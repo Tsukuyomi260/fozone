@@ -32,6 +32,17 @@ router.get('/tickets-sold-stats',
   accountingController.getTicketsSoldStats
 );
 
+// Repartition par moyen de paiement (pour le graphique)
+router.get('/payment-methods',
+  [
+    query('startDate').optional().isISO8601(),
+    query('endDate').optional().isISO8601(),
+    query('zoneId').optional().isUUID()
+  ],
+  validate,
+  accountingController.getPaymentMethodStats
+);
+
 // Historique des paiements
 router.get('/payment-history',
   [
