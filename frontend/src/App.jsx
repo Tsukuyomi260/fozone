@@ -5,6 +5,11 @@ import { isAuthenticated, getCurrentUser } from './services/auth';
 import Layout from './components/Layout';
 import AdminLayout from './components/AdminLayout';
 import PageFallback from './components/PageFallback';
+// Seule page importee statiquement: c'est la premiere page d'un visiteur qui
+// ne connait pas Fo-Zone. En chargement paresseux, elle ajouterait un
+// aller-retour reseau (index.js puis vendor.js puis Landing.js) avant le
+// premier mot affiche, sur la connexion la plus lente du parcours.
+import Landing from './pages/Landing';
 
 // Apres un deploiement, un onglet reste ouvert reclame d'anciens fichiers qui
 // n'existent plus chez Vercel: l'import echoue et la page reste blanche. On
@@ -57,26 +62,22 @@ const AdminTenants = lazyPage(() => import('./pages/admin/AdminTenants'));
 
 function AppRoutes() {
   const location = useLocation();
-  const [loading, setLoading] = useState(true);
-  const [authenticated, setAuthenticated] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  // isAuthenticated() lit localStorage, c'est synchrone: l'etat est calculable
+  // des le premier rendu. L'ancien etat `loading` imposait un spinner plein
+  // ecran a chaque visiteur avant le premier useEffect, y compris sur la page
+  // d'accueil publique.
+  const [authenticated, setAuthenticated] = useState(isAuthenticated);
+  // Le role vient du profil stocke au login: aucun compte promoteur ne peut
+  // se pretendre super-admin cote client, la valeur vient du backend.
+  const [isSuperAdmin, setIsSuperAdmin] = useState(
+    () => isAuthenticated() && getCurrentUser()?.role === 'super_admin'
+  );
 
   useEffect(() => {
     const authed = isAuthenticated();
     setAuthenticated(authed);
-    // Le role vient du profil stocke au login: aucun compte promoteur ne
-    // peut se pretendre super-admin cote client, la valeur vient du backend.
     setIsSuperAdmin(authed && getCurrentUser()?.role === 'super_admin');
-    setLoading(false);
   }, [location]); // Re-vérifier à chaque changement de route
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
 
   // Destination par defaut une fois authentifie: jamais melangee entre
   // l'espace plateforme et l'espace promoteur.
@@ -90,6 +91,17 @@ function AppRoutes() {
       {/* barre laterale reste affichee pendant le chargement. */}
       <Suspense fallback={<PageFallback fullScreen />}>
       <Routes>
+        {/* Accueil public. Un promoteur deja connecte n'a rien a y faire: on
+            l'envoie directement chez lui. */}
+        <Route
+          path="/"
+          element={
+            !authenticated ? <Landing />
+            : isSuperAdmin ? <Navigate to="/admin" replace />
+            : <Navigate to="/dashboard" replace />
+          }
+        />
+
         {/* Routes publiques (pas d'authentification requise) */}
         <Route path="/buy/:zoneId" element={<BuyTicket />} />
         <Route path="/payment/return" element={<PaymentReturn />} />
@@ -113,25 +125,30 @@ function AppRoutes() {
           <Route path="tenants" element={<AdminTenants />} />
         </Route>
 
-        {/* Espace promoteur: le super-admin n'y a pas sa place non plus. */}
+        {/* Espace promoteur: le super-admin n'y a pas sa place non plus.
+            Route sans chemin: les URL des pages ne changent pas, mais "/" est
+            libere pour l'accueil public. Toute route ajoutee ici est
+            automatiquement protegee par la garde ci-dessous. */}
         <Route
-          path="/"
           element={
             !authenticated ? <Navigate to="/login" replace />
             : isSuperAdmin ? <Navigate to="/admin" replace />
             : <Layout />
           }
         >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="zones" element={<WifiZones />} />
-          <Route path="zones/:id" element={<WifiZoneDetail />} />
-          <Route path="pricings" element={<Pricings />} />
-          <Route path="tickets" element={<Tickets />} />
-          <Route path="accounting" element={<Accounting />} />
-          <Route path="wallet" element={<Wallet />} />
-          <Route path="profile" element={<Profile />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/zones" element={<WifiZones />} />
+          <Route path="/zones/:id" element={<WifiZoneDetail />} />
+          <Route path="/pricings" element={<Pricings />} />
+          <Route path="/tickets" element={<Tickets />} />
+          <Route path="/accounting" element={<Accounting />} />
+          <Route path="/wallet" element={<Wallet />} />
+          <Route path="/profile" element={<Profile />} />
         </Route>
+
+        {/* Sans cette route, une URL inconnue affichait une page blanche:
+            vercel.json renvoie index.html pour tous les chemins. */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </Suspense>
     </>

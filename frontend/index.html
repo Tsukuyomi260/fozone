@@ -4,7 +4,35 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FÔ-ZÔNE - Gestion de tickets Wi-Fi</title>
+    <meta name="theme-color" content="#F9FAFB" />
+    <title>FÔ-ZÔNE - Vendez vos tickets Wi-Fi par Mobile Money</title>
+    <meta
+      name="description"
+      content="Fô-Zône transforme votre hotspot MikroTik en point de vente automatique : vos clients paient par MTN MoMo ou Moov Money et reçoivent leur ticket Wi-Fi en quelques secondes. 5 % par ticket vendu, frais de paiement compris."
+    />
+
+    <script>
+      // Applique le theme avant le premier pixel. Sans ce script, une page
+      // publique ouverte depuis un lien direct s'affiche en clair puis bascule
+      // au montage de React, car seuls Layout et AdminLayout posaient la classe.
+      // Doit rester identique a src/services/theme.js: meme cle, meme repli.
+      (function () {
+        try {
+          var stored = localStorage.getItem('darkMode');
+          var dark = !stored
+            ? window.matchMedia('(prefers-color-scheme: dark)').matches
+            : stored === 'true';
+
+          if (dark) {
+            document.documentElement.classList.add('dark');
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', '#080B0A');
+          }
+        } catch (e) {
+          // Navigation privee iOS, navigateur integre a WhatsApp: on reste en clair
+        }
+      })();
+    </script>
     <!-- Google Fonts - Inter pour un design moderne -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

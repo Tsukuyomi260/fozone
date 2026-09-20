@@ -3,13 +3,13 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import PageFallback from './PageFallback';
 import { Moon, Sun, Menu, X, Wifi, Home, DollarSign, Ticket, FileText, LogOut, Settings, Search, X as XIcon, ChevronLeft, ChevronDown, Wallet } from 'lucide-react';
 import { logout, getCurrentUser } from '../services/auth';
+import { useTheme } from '../services/theme';
 import Logo from './Logo';
 
 export default function Layout() {
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('darkMode') === 'true' ||
-           (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  });
+  // Le theme est deja applique par le script de index.html: on le lit, on ne
+  // le recalcule pas.
+  const [darkMode, toggleDarkMode] = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     return localStorage.getItem('sidebarCollapsed') === 'true';
@@ -31,20 +31,7 @@ export default function Layout() {
 
   useEffect(() => {
     setUser(getCurrentUser());
-
-    // Appliquer le dark mode
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
-
-  const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode.toString());
-  };
+  }, []);
 
   const handleLogout = () => {
     logout();

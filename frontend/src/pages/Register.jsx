@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register } from '../services/auth';
 import toast from 'react-hot-toast';
-import { Wifi, Mail, Lock, User } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import Logo from '../components/Logo';
 
 export default function Register() {
@@ -11,81 +11,98 @@ export default function Register() {
     password: '',
     full_name: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Erreur affichée dans la carte, pas en toast: un toast disparaît avant
+  // qu'on ait fini de le lire et passe mal aux lecteurs d'écran.
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
 
     try {
-      await register(formData.email, formData.password, formData.full_name);
+      await register(formData.email.trim(), formData.password, formData.full_name);
       toast.success('Inscription réussie !');
       navigate('/dashboard');
-    } catch (error) {
-      console.error('[Register] Erreur:', error);
-      toast.error(error.message || 'Impossible de créer le compte');
+    } catch (err) {
+      console.error('[Register] Erreur:', err);
+      setError(err.message || 'Impossible de créer le compte');
     } finally {
       setLoading(false);
     }
   };
 
+  const field =
+    'w-full h-12 pl-11 rounded-xl text-[15px] bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/15 focus:bg-white dark:focus:bg-white/[0.06] transition-colors';
+
+  const label =
+    'block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide';
+
+  const icon =
+    'absolute left-3.5 top-1/2 -translate-y-1/2 h-[18px] w-[18px] text-gray-400 dark:text-gray-600 pointer-events-none';
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-green-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-12">
-      <div className="w-full max-w-md">
-        {/* Logo et titre */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl mb-6 shadow-lg shadow-green-500/20">
-            <Wifi className="text-white" size={36} strokeWidth={2.5} />
-          </div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
-            Créer un compte
-          </h1>
-          <p className="text-base text-gray-600 dark:text-gray-400 font-medium flex items-center justify-center gap-2">
-            Rejoignez <Logo size="lg" className="inline-block text-gray-900 dark:text-white" />
+    <div className="relative min-h-screen flex items-center justify-center px-4 py-10 bg-gray-50 dark:bg-[#080B0A] overflow-hidden">
+      {/* Halo vert, comme sur le portail captif */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-70 dark:opacity-100"
+        style={{
+          background:
+            'radial-gradient(70% 45% at 50% -5%, rgba(163, 230, 53, 0.16), transparent 70%)',
+        }}
+      />
+
+      <div className="relative w-full max-w-[400px]">
+        {/* Marque */}
+        <div className="text-center mb-8">
+          <Logo size="xl" className="text-gray-900 dark:text-white" />
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
+            Créez votre compte et commencez à vendre vos tickets Wi-Fi
           </p>
         </div>
 
         {/* Formulaire */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-green-100 dark:border-gray-700 p-8 md:p-10">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#101714] shadow-sm dark:shadow-black/40 p-6 sm:p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Nom complet */}
             <div>
-              <label htmlFor="full_name" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">
+              <label htmlFor="full_name" className={label}>
                 Nom complet
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" strokeWidth={2} />
-                </div>
+                <User className={icon} strokeWidth={2} aria-hidden="true" />
                 <input
                   id="full_name"
                   type="text"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                   required
-                  className="input pl-12 h-12 text-base"
-                  placeholder="Jean Dupont"
+                  autoComplete="name"
+                  className={field}
+                  placeholder="Jean Dossou"
                 />
               </div>
             </div>
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">
+              <label htmlFor="email" className={label}>
                 Email
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" strokeWidth={2} />
-                </div>
+                <Mail className={icon} strokeWidth={2} aria-hidden="true" />
                 <input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
-                  className="input pl-12 h-12 text-base"
+                  autoComplete="email"
+                  className={field}
                   placeholder="votre@email.com"
                 />
               </div>
@@ -93,47 +110,87 @@ export default function Register() {
 
             {/* Mot de passe */}
             <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">
+              <label htmlFor="password" className={label}>
                 Mot de passe
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" strokeWidth={2} />
-                </div>
+                <Lock className={icon} strokeWidth={2} aria-hidden="true" />
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
                   minLength={6}
-                  className="input pl-12 h-12 text-base"
+                  autoComplete="new-password"
+                  aria-describedby="password-hint"
+                  className={`${field} pr-11`}
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-600 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  title={showPassword ? 'Masquer' : 'Afficher'}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-[18px] w-[18px]" strokeWidth={2} />
+                  ) : (
+                    <Eye className="h-[18px] w-[18px]" strokeWidth={2} />
+                  )}
+                  <span className="sr-only">
+                    {showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                  </span>
+                </button>
               </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              <p
+                id="password-hint"
+                className="mt-2 text-xs text-gray-500 dark:text-gray-400"
+              >
                 Minimum 6 caractères
               </p>
             </div>
+
+            {error && (
+              <p
+                role="alert"
+                className="rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 px-3.5 py-2.5 text-sm text-red-700 dark:text-red-400"
+              >
+                {error}
+              </p>
+            )}
 
             {/* Bouton d'inscription */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-12 mt-1 inline-flex items-center justify-center gap-2 text-[15px] font-bold bg-lime-400 hover:bg-lime-300 text-[#0A1005] rounded-xl shadow-lg shadow-lime-400/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#101714]"
             >
-              {loading ? 'Inscription...' : 'S\'inscrire'}
+              {loading ? (
+                <>
+                  <span className="h-4 w-4 rounded-full border-2 border-[#0A1005]/30 border-t-[#0A1005] animate-spin" />
+                  Inscription...
+                </>
+              ) : (
+                <>
+                  S'inscrire
+                  <ArrowRight size={17} strokeWidth={2.5} aria-hidden="true" />
+                </>
+              )}
             </button>
           </form>
-
-          {/* Lien de connexion */}
-          <p className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
-            Déjà un compte ?{' '}
-            <Link to="/login" className="font-semibold text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 underline transition-colors">
-              Se connecter
-            </Link>
-          </p>
         </div>
+
+        {/* Lien de connexion */}
+        <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          Déjà un compte ?{' '}
+          <Link
+            to="/login"
+            className="font-semibold text-lime-700 dark:text-lime-400 hover:text-lime-600 dark:hover:text-lime-300 transition-colors"
+          >
+            Se connecter
+          </Link>
+        </p>
       </div>
     </div>
   );

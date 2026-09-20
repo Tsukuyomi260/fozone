@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import PageFallback from './PageFallback';
 import { Moon, Sun, Menu, X, LayoutDashboard, Wallet, Users, LogOut } from 'lucide-react';
 import { logout, getCurrentUser } from '../services/auth';
+import { useTheme } from '../services/theme';
 import Logo from './Logo';
 
 /**
@@ -14,10 +15,9 @@ import Logo from './Logo';
  * les deux arbres.
  */
 export default function AdminLayout() {
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('darkMode') === 'true' ||
-           (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  });
+  // Le theme est deja applique par le script de index.html: on le lit, on ne
+  // le recalcule pas.
+  const [darkMode, toggleDarkMode] = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
@@ -25,18 +25,7 @@ export default function AdminLayout() {
 
   useEffect(() => {
     setUser(getCurrentUser());
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
-
-  const toggleDarkMode = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    localStorage.setItem('darkMode', next.toString());
-  };
+  }, []);
 
   const handleLogout = () => {
     logout();
