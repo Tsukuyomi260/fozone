@@ -51,6 +51,7 @@ const WifiZones = lazyPage(() => import('./pages/WifiZones'));
 const WifiZoneDetail = lazyPage(() => import('./pages/WifiZoneDetail'));
 const Pricings = lazyPage(() => import('./pages/Pricings'));
 const Tickets = lazyPage(() => import('./pages/Tickets'));
+const CaptivePortal = lazyPage(() => import('./pages/CaptivePortal'));
 const Accounting = lazyPage(() => import('./pages/Accounting'));
 const Profile = lazyPage(() => import('./pages/Profile'));
 const BuyTicket = lazyPage(() => import('./pages/BuyTicket'));
@@ -141,6 +142,7 @@ function AppRoutes() {
           <Route path="/zones/:id" element={<WifiZoneDetail />} />
           <Route path="/pricings" element={<Pricings />} />
           <Route path="/tickets" element={<Tickets />} />
+          <Route path="/captive-portal" element={<CaptivePortal />} />
           <Route path="/accounting" element={<Accounting />} />
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/profile" element={<Profile />} />

@@ -1,7 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef, Suspense } from 'react';
 import PageFallback from './PageFallback';
-import { Moon, Sun, Menu, X, Wifi, Home, DollarSign, Ticket, FileText, LogOut, Settings, Search, X as XIcon, ChevronLeft, ChevronDown, Wallet } from 'lucide-react';
+import { Moon, Sun, Menu, X, Wifi, Home, DollarSign, Ticket, FileText, LogOut, Settings, Search, X as XIcon, ChevronLeft, ChevronDown, Wallet, Router } from 'lucide-react';
 import { logout, getCurrentUser } from '../services/auth';
 import { useTheme } from '../services/theme';
 import Logo from './Logo';
@@ -79,6 +79,8 @@ export default function Layout() {
     const query = searchQuery.toLowerCase().trim();
     const routes = [
       { path: '/dashboard', keywords: ['dashboard', 'accueil', 'tableau', 'home'] },
+      // Avant /zones: le mot-clé 'zone' capterait sinon « portail captif zone »
+      { path: '/captive-portal', keywords: ['portail', 'captif', 'hotspot', 'mikrotik', 'routeur'] },
       { path: '/zones', keywords: ['zones', 'wifi', 'zone', 'réseau'] },
       { path: '/pricings', keywords: ['tarifs', 'prix', 'forfaits', 'pricing'] },
       { path: '/tickets', keywords: ['tickets', 'billets', 'ticket'] },
@@ -112,6 +114,7 @@ export default function Layout() {
         { path: '/zones', icon: Wifi, label: 'Zones Wi-Fi' },
         { path: '/pricings', icon: DollarSign, label: 'Tarifs' },
         { path: '/tickets', icon: Ticket, label: 'Tickets' },
+        { path: '/captive-portal', icon: Router, label: 'Portail captif' },
       ],
     },
     {

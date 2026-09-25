@@ -29,11 +29,15 @@ Cette plateforme permet de :
 - **React Router** pour la navigation
 - Thème sombre/clair avec bascule manuelle
 
-### Portail captif (`hotspot/`)
-- `login.html` — page de connexion MikroTik (gabarit `$(...)`), liens vers l'achat et la récupération de ticket
-- `redirect.html` — page affichée après authentification hotspot réussie
+### Portail captif
 
-Ces fichiers sont à copier sur le routeur MikroTik (`/files`), ils ne sont pas servis par le backend.
+Les pages du portail sont **générées par le tableau de bord**, page « Portail captif » (`/captive-portal`) : le promoteur choisit sa zone, un style parmi trois, un nom affiché, un pied de page et un numéro WhatsApp, puis télécharge `login.html` et `redirect.html` déjà remplis. La page fournit aussi les commandes walled garden et la marche à suivre sur le routeur.
+
+- `frontend/src/templates/captivePortal.js` — le générateur (gabarits, variantes, walled garden, résolution pour l'aperçu)
+- `frontend/src/pages/CaptivePortal.jsx` — l'écran promoteur
+- `hotspot/login.html`, `hotspot/redirect.html` — exemple de sortie, conservé comme référence ; c'est le générateur qui fait foi
+
+Les fichiers produits sont à copier dans `/files` du routeur MikroTik ; ils ne sont pas servis par le backend. Les balises `$(...)` sont interprétées par RouterOS et doivent rester intactes. `md5.js` et le dossier `img/` viennent de MikroTik et doivent rester en place, sinon la connexion casse.
 
 ## Prérequis
 
@@ -76,7 +80,9 @@ Le frontend démarre sur `http://localhost:5174`.
 
 ### 4. Portail captif MikroTik
 
-Copier `hotspot/login.html` et `hotspot/redirect.html` dans le dossier `/files` du routeur (via Winbox ou FTP). Le SSID, le lien d'achat (`fozone.org/buy/<zoneId>`) et le lien de récupération (`fozone.org/payment/return`) sont en dur dans `login.html` — à adapter si le domaine ou l'UUID de zone changent.
+Depuis le tableau de bord, page « Portail captif » : choisir la zone, télécharger `login.html` et `redirect.html`, les déposer dans `/files` du routeur (Winbox ou FTP), puis coller le bloc walled garden fourni dans le terminal RouterOS.
+
+Le lien d'achat est celui de la zone sélectionnée : un fichier installé sur le routeur d'une autre zone encaisse sur cette zone-là. Un jeu de fichiers par point Wi-Fi.
 
 ## Documentation
 
