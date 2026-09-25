@@ -33,7 +33,40 @@ export const PORTAL_VARIANTS = [
     label: 'Minimal',
     description: 'Aucun effet, très léger sur les téléphones anciens.',
   },
+  {
+    id: 'verre',
+    label: 'Verre',
+    description: 'Carte translucide sur fond sombre, effet premium.',
+  },
+  {
+    id: 'editorial',
+    label: 'Éditorial',
+    description: 'Noir et blanc, angles droits, très typographique.',
+  },
+  {
+    id: 'industriel',
+    label: 'Industriel',
+    description: 'Gris anthracite et vert électrique, allure technique.',
+  },
 ];
+
+/**
+ * Icônes dessinées en ligne.
+ *
+ * Les gabarits d'origine chargeaient Bootstrap Icons et Phosphor depuis un
+ * CDN. Sur un portail captif c'est fatal : le client n'a pas encore d'accès
+ * internet au moment où la page s'affiche, donc aucune icône n'arrive. Idem
+ * pour l'image de fond Unsplash et les logos hébergés ailleurs. Tout ce qui
+ * s'affiche ici doit venir du routeur.
+ */
+const ICONS = {
+  cart: '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h2.2l2.3 11.4a1.8 1.8 0 0 0 1.8 1.4h8.6a1.8 1.8 0 0 0 1.8-1.4L21 7H5.4"/></svg>',
+  ticket: '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9V7a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2a2.5 2.5 0 0 0 0 5v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2a2.5 2.5 0 0 0 0-5Z"/><path d="M13 6v2M13 11v2M13 16v2"/></svg>',
+  user: '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
+  lock: '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+  bolt: '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7Z"/></svg>',
+  shield: '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5.5c0 4.2 2.9 7.6 7 9.5 4.1-1.9 7-5.3 7-9.5V6Z"/><path d="M9.5 12.5 11 14l3.5-3.5"/></svg>',
+};
 
 /** Empêche une saisie du promoteur de casser le HTML généré. */
 export function escapeHtml(value) {
@@ -636,13 +669,490 @@ const STYLES = {
 
         .help { margin-top: 12px; text-align: center; font-size: 13px; }
         .help a { color: #2E6B00; font-weight: 700; }`,
+
+  // Reprise du gabarit « Glassmorph ». Seule entorse à l'original: la photo
+  // Unsplash du fond est remplacée par un dégradé CSS, car une image distante
+  // ne se charge pas tant que le client n'est pas authentifié.
+  verre: `
+        :root {
+            --brand-color: #007BFF;
+            --brand-hover: #0056b3;
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.18);
+            --text-main: #FFFFFF;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background:
+                radial-gradient(90% 70% at 15% 0%, #1b3a5c 0%, transparent 60%),
+                radial-gradient(80% 60% at 100% 100%, #123047 0%, transparent 65%),
+                linear-gradient(135deg, #060b12 0%, #0d1621 100%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            padding: 20px;
+            position: relative;
+            color-scheme: dark;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.35) 100%);
+            pointer-events: none;
+        }
+
+        .login-card {
+            position: relative;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-header { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+
+        h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+
+        .subtitle { font-size: 15px; color: var(--text-muted); line-height: 1.5; }
+
+        .action-container { display: flex; flex-direction: column; gap: 12px; }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .btn .ico { width: 20px; height: 20px; flex-shrink: 0; }
+
+        .btn-primary { background-color: var(--brand-color); color: #fff; }
+        .btn-primary:hover { background-color: var(--brand-hover); transform: translateY(-1px); }
+
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-secondary:hover { background-color: rgba(255, 255, 255, 0.1); }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            text-transform: uppercase;
+            font-size: 11px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.1); }
+        .divider span { padding: 0 15px; }
+
+        .form-group { position: relative; }
+
+        .form-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            color: var(--text-muted);
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px 15px 15px 45px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: 16px;
+            color: #fff;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .form-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--brand-color);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+
+        .alert-box {
+            background: rgba(220, 53, 69, 0.15);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            color: #ff8b94;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .card-footer {
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: -10px;
+        }
+
+        .help { text-align: center; font-size: 13px; margin-top: -10px; }
+        .help a { color: #fff; font-weight: 600; text-decoration: underline; }
+
+        @media (max-width: 480px) {
+            .login-card { padding: 30px; }
+            h1 { font-size: 22px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .login-card { animation: none; }
+            * { transition: none !important; }
+        }`,
+
+  // Reprise du gabarit « Max Edit ». Le logo distant est remplacé par le nom
+  // de la zone en typographie, pour la même raison que ci-dessus.
+  editorial: `
+        :root {
+            --brand-color: #000000;
+            --brand-hover: #333333;
+            --bg-page: #FFFFFF;
+            --text-main: #000000;
+            --text-muted: #666666;
+            --border-color: #E0E0E0;
+            --input-bg: #FAFAFA;
+            --error-bg: #FFF5F5;
+            --error-text: #D93025;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            padding: 20px;
+            color-scheme: light;
+        }
+
+        .minimal-card {
+            width: 100%;
+            max-width: 400px;
+            background: #FFFFFF;
+            /* Pas d'ombre portée lourde, juste une fine bordure */
+            border: 1px solid var(--border-color);
+            padding: 50px 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        .card-header { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            line-height: 1.15;
+        }
+
+        .subtitle { font-size: 16px; color: var(--text-muted); line-height: 1.6; font-weight: 300; }
+
+        .action-container { display: flex; flex-direction: column; gap: 15px; }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            padding: 16px 20px;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-decoration: none;
+            border-radius: 0; /* Carré, strict */
+            transition: all 0.3s ease;
+            border: 1px solid var(--brand-color);
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .btn .ico { width: 18px; height: 18px; flex-shrink: 0; }
+
+        .btn-primary { background-color: var(--brand-color); color: #FFFFFF; }
+        .btn-primary:hover { background-color: var(--brand-hover); border-color: var(--brand-hover); }
+
+        .btn-secondary { background-color: transparent; color: var(--brand-color); }
+        .btn-secondary:hover { background-color: rgba(0,0,0,0.05); }
+
+        .divider {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+        }
+        .divider::before { content: ''; position: absolute; left: 0; top: 50%; width: 40%; height: 1px; background: var(--border-color); }
+        .divider::after { content: ''; position: absolute; right: 0; top: 50%; width: 40%; height: 1px; background: var(--border-color); }
+
+        .form-group { position: relative; }
+
+        .form-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 18px 15px 18px 50px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0;
+            font-size: 16px;
+            color: var(--text-main);
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus { outline: none; border-color: var(--text-main); }
+
+        ::placeholder { color: #BBBBBB; }
+
+        .alert-box {
+            background: var(--error-bg);
+            color: var(--error-text);
+            padding: 15px;
+            text-align: center;
+            font-size: 13px;
+            border: 1px solid #ffcccc;
+        }
+
+        .card-footer {
+            text-align: center;
+            font-size: 11px;
+            color: #AAAAAA;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .help { text-align: center; font-size: 12px; letter-spacing: 0.5px; }
+        .help a { color: var(--brand-color); font-weight: 700; }
+
+        @media (max-width: 480px) {
+            .minimal-card { padding: 40px 30px; }
+            h1 { font-size: 24px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; }
+        }`,
+
+  // Reprise du gabarit « Dark Industrie ».
+  industriel: `
+        :root {
+            --brand-color: #32CD32;
+            --brand-hover: #2E8B57;
+            --bg-body: #121212;
+            --bg-card: #1E1E1E;
+            --text-main: #FFFFFF;
+            --text-muted: #AAAAAA;
+            --border-color: #333333;
+            --input-bg: #2C2C2C;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            padding: 20px;
+            color-scheme: dark;
+        }
+
+        .dark-card {
+            width: 100%;
+            max-width: 420px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        .card-header { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+
+        h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.25; }
+
+        .subtitle { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+
+        .action-container { display: flex; flex-direction: column; gap: 12px; }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .btn .ico { width: 19px; height: 19px; flex-shrink: 0; }
+
+        .btn-primary { background-color: var(--brand-color); color: #000000; }
+        .btn-primary:hover { background-color: var(--brand-hover); }
+
+        .btn-secondary { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
+        .btn-secondary:hover { background-color: rgba(255,255,255,0.05); }
+
+        .divider { display: flex; align-items: center; font-size: 12px; color: var(--text-muted); }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+        .divider span { padding: 0 15px; }
+
+        .form-group { position: relative; }
+
+        .form-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px 15px 16px 45px;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            color: var(--text-main);
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus { outline: none; border-color: var(--brand-color); }
+
+        ::placeholder { color: var(--text-muted); opacity: 0.5; }
+
+        .alert-box {
+            background-color: rgba(239, 83, 80, 0.2);
+            color: #ef5350;
+            padding: 12px;
+            text-align: center;
+            font-size: 13px;
+            border-radius: 8px;
+            border: 1px solid rgba(239, 83, 80, 0.3);
+        }
+
+        .card-footer { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: -10px; }
+
+        .help { text-align: center; font-size: 13px; margin-top: -10px; }
+        .help a { color: var(--brand-color); font-weight: 600; }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; }
+        }`,
 };
 
 const THEME_COLOR = {
   sombre: '#080B0A',
   clair: '#F6F7F5',
   minimal: '#FFFFFF',
+  verre: '#0d1621',
+  editorial: '#FFFFFF',
+  industriel: '#121212',
 };
+
+/** Bloc CHAP de MikroTik, identique pour tous les gabarits. */
+const CHAP_BLOCK = `    $(if chap-id)
+    <form name="sendin" action="$(link-login-only)" method="post" style="display:none">
+        <input type="hidden" name="username" />
+        <input type="hidden" name="password" />
+        <input type="hidden" name="dst" value="$(link-orig)" />
+        <input type="hidden" name="popup" value="true" />
+    </form>
+    <script src="/md5.js"></script>
+    <script>
+        function doLogin() {
+            document.sendin.username.value = document.login.username.value;
+            document.sendin.password.value = hexMD5('$(chap-id)' + document.login.password.value + '$(chap-challenge)');
+            document.sendin.submit();
+            return false;
+        }
+    </script>
+    $(endif)`;
 
 /* ------------------------------------------------------------------- login */
 
@@ -652,7 +1162,18 @@ const THEME_COLOR = {
  * Les blocs `$(if ...)`, `$(endif)` et `$(variable)` sont recopiés tels quels:
  * ils sont interprétés par le routeur, pas ici.
  */
-export function buildLoginHtml({
+export function buildLoginHtml(options = {}) {
+  const variant = options.variant || 'sombre';
+
+  if (variant === 'verre') return buildVerreLogin(options);
+  if (variant === 'editorial') return buildEditorialLogin(options);
+  if (variant === 'industriel') return buildIndustrielLogin(options);
+
+  return buildFozoneLogin(options);
+}
+
+/** Gabarits d'origine Fô-Zône: sombre, clair, minimal. */
+function buildFozoneLogin({
   variant = 'sombre',
   displayName = 'Wi-Fi Zone',
   footerText = '',
@@ -745,6 +1266,248 @@ export function buildLoginHtml({
 `;
 }
 
+/**
+ * « Verre » — carte translucide sur fond sombre.
+ * Le fond photo distant de l'original est devenu un dégradé CSS : une image
+ * hébergée ailleurs ne se charge pas avant que le client soit connecté.
+ */
+function buildVerreLogin({
+  displayName = 'Wi-Fi Zone',
+  footerText = '',
+  whatsapp = '',
+  buyUrl,
+  recoveryUrl,
+}) {
+  const phone = normalizePhone(whatsapp);
+
+  return `<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="expires" content="-1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="${THEME_COLOR.verre}" />
+    <title>Internet hotspot - Log in</title>
+    <style>${STYLES.verre}
+    </style>
+</head>
+<body>
+${CHAP_BLOCK}
+
+    <div class="login-card">
+        <div class="card-header">
+            <h1>${escapeHtml(displayName)}</h1>
+            <p class="subtitle">Veuillez vous identifier pour accéder à internet.</p>
+        </div>
+
+        $(if error)
+        <div class="alert-box">$(error)</div>
+        $(endif)
+
+        <div class="action-container">
+            <a href="${buyUrl}" class="btn btn-primary">
+                ${ICONS.cart}
+                Acheter un accès
+            </a>
+            <a href="${recoveryUrl}" class="btn btn-secondary">
+                ${ICONS.ticket}
+                J'ai déjà un ticket
+            </a>
+        </div>
+
+        <div class="divider"><span>ou</span></div>
+
+        <form name="login" action="$(link-login-only)" method="post" $(if chap-id) onSubmit="return doLogin()" $(endif) class="login-form">
+            <input type="hidden" name="dst" value="$(link-orig)" />
+            <input type="hidden" name="popup" value="true" />
+
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="form-group">
+                    <span class="form-icon">${ICONS.user}</span>
+                    <input name="username" type="text" value="$(username)" placeholder="Nom d'utilisateur" class="form-input" required />
+                </div>
+
+                <div class="form-group">
+                    <span class="form-icon">${ICONS.lock}</span>
+                    <input name="password" type="password" placeholder="Mot de passe" class="form-input" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Se connecter
+                </button>
+            </div>
+        </form>
+${phone ? `
+        <p class="help">Un souci&nbsp;? <a href="https://wa.me/${phone}">Écrivez-nous sur WhatsApp</a></p>` : ''}${footerText ? `
+        <div class="card-footer"><p>${escapeHtml(footerText)}</p></div>` : ''}
+    </div>
+
+</body>
+</html>
+`;
+}
+
+/**
+ * « Éditorial » — noir et blanc, angles droits.
+ * Le logo distant de l'original est remplacé par le nom de la zone en
+ * typographie : c'est déjà la vocation de ce gabarit.
+ */
+function buildEditorialLogin({
+  displayName = 'Wi-Fi Zone',
+  footerText = '',
+  whatsapp = '',
+  buyUrl,
+  recoveryUrl,
+}) {
+  const phone = normalizePhone(whatsapp);
+
+  return `<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="expires" content="-1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="${THEME_COLOR.editorial}" />
+    <title>Internet hotspot - Log in</title>
+    <style>${STYLES.editorial}
+    </style>
+</head>
+<body>
+${CHAP_BLOCK}
+
+    <div class="minimal-card">
+        <div class="card-header">
+            <h1>${escapeHtml(displayName)}</h1>
+            <p class="subtitle">Veuillez vous authentifier pour continuer.</p>
+        </div>
+
+        $(if error)
+        <div class="alert-box">$(error)</div>
+        $(endif)
+
+        <div class="action-container">
+            <a href="${buyUrl}" class="btn btn-primary">
+                ${ICONS.cart}
+                Acheter un accès
+            </a>
+            <a href="${recoveryUrl}" class="btn btn-secondary">
+                ${ICONS.ticket}
+                Récupérer mon ticket
+            </a>
+        </div>
+
+        <div class="divider"><span>ou</span></div>
+
+        <form name="login" action="$(link-login-only)" method="post" $(if chap-id) onSubmit="return doLogin()" $(endif) class="login-form">
+            <input type="hidden" name="dst" value="$(link-orig)" />
+            <input type="hidden" name="popup" value="true" />
+
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div class="form-group">
+                    <span class="form-icon">${ICONS.user}</span>
+                    <input name="username" type="text" value="$(username)" placeholder="Identifiant" class="form-input" required />
+                </div>
+
+                <div class="form-group">
+                    <span class="form-icon">${ICONS.lock}</span>
+                    <input name="password" type="password" placeholder="Mot de passe" class="form-input" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Connexion sécurisée
+                </button>
+            </div>
+        </form>
+${phone ? `
+        <p class="help">Un souci&nbsp;? <a href="https://wa.me/${phone}">Écrivez-nous sur WhatsApp</a></p>` : ''}${footerText ? `
+        <div class="card-footer"><p>${escapeHtml(footerText)}</p></div>` : ''}
+    </div>
+
+</body>
+</html>
+`;
+}
+
+/** « Industriel » — anthracite et vert électrique. */
+function buildIndustrielLogin({
+  displayName = 'Wi-Fi Zone',
+  footerText = '',
+  whatsapp = '',
+  buyUrl,
+  recoveryUrl,
+}) {
+  const phone = normalizePhone(whatsapp);
+
+  return `<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="expires" content="-1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="${THEME_COLOR.industriel}" />
+    <title>Internet hotspot - Log in</title>
+    <style>${STYLES.industriel}
+    </style>
+</head>
+<body>
+${CHAP_BLOCK}
+
+    <div class="dark-card">
+        <div class="card-header">
+            <h1>${escapeHtml(displayName)}</h1>
+            <p class="subtitle">Connectez-vous pour accéder à internet.</p>
+        </div>
+
+        $(if error)
+        <div class="alert-box">$(error)</div>
+        $(endif)
+
+        <div class="action-container">
+            <a href="${buyUrl}" class="btn btn-primary">
+                ${ICONS.bolt}
+                Acheter un pass rapide
+            </a>
+            <a href="${recoveryUrl}" class="btn btn-secondary">
+                ${ICONS.ticket}
+                Utiliser un code existant
+            </a>
+        </div>
+
+        <div class="divider"><span>ou identifiez-vous</span></div>
+
+        <form name="login" action="$(link-login-only)" method="post" $(if chap-id) onSubmit="return doLogin()" $(endif) class="login-form">
+            <input type="hidden" name="dst" value="$(link-orig)" />
+            <input type="hidden" name="popup" value="true" />
+
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="form-group">
+                    <span class="form-icon">${ICONS.user}</span>
+                    <input name="username" type="text" value="$(username)" placeholder="Utilisateur" class="form-input" required />
+                </div>
+
+                <div class="form-group">
+                    <span class="form-icon">${ICONS.shield}</span>
+                    <input name="password" type="password" placeholder="Mot de passe" class="form-input" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    CONNEXION
+                </button>
+            </div>
+        </form>
+${phone ? `
+        <p class="help">Un souci&nbsp;? <a href="https://wa.me/${phone}">Écrivez-nous sur WhatsApp</a></p>` : ''}${footerText ? `
+        <div class="card-footer"><p>${escapeHtml(footerText)}</p></div>` : ''}
+    </div>
+
+</body>
+</html>
+`;
+}
+
 /* ---------------------------------------------------------------- redirect */
 
 /**
@@ -752,7 +1515,7 @@ export function buildLoginHtml({
  * promoteur : seul le style suit la variante choisie.
  */
 export function buildRedirectHtml({ variant = 'sombre' } = {}) {
-  const dark = variant === 'sombre';
+  const dark = ['sombre', 'verre', 'industriel'].includes(variant);
   const themeColor = THEME_COLOR[variant] || THEME_COLOR.sombre;
 
   const palette = dark
@@ -934,6 +1697,8 @@ export function toPreviewHtml(html) {
       .replace(/\$\(if chap-id\)[\s\S]*?\$\(endif\)/g, '')
       // Cas nominal: pas d'erreur, pas d'essai gratuit
       .replace(/\$\(if error\)alert\$\(endif\)/g, '')
+      // Bloc d'erreur complet des gabarits Verre, Editorial et Industriel
+      .replace(/\$\(if error\)[\s\S]*?\$\(endif\)/g, '')
       .replace(/\$\(if trial == 'yes'\)[\s\S]*?\$\(endif\)/g, '')
       .replace(/\$\(if error == ""\)/g, '')
       .replace(/\$\(if error\)\$\(error\)\$\(endif\)/g, '')
