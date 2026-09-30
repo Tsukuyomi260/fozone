@@ -22,7 +22,7 @@ const COUNTRIES = {
     name: 'Bénin',
     dialCode: '229',
     placeholder: '01 53 48 98 46',
-    methods: ['mtn_bj', 'moov_bj'],
+    methods: ['mtn_bj', 'moov_bj', 'celtiis_bj'],
   },
   CI: {
     code: 'CI',
@@ -50,7 +50,10 @@ const COUNTRIES = {
     name: 'Mali',
     dialCode: '223',
     placeholder: '70 00 00 00',
-    methods: ['orange_ml', 'moov_ml', 'mobi_cash_ml'],
+    // mobi_cash_ml figurait dans la documentation mais Moneroo le refuse:
+    // « The payment method 'mobi_cash_ml' is invalid ». Un seul code inconnu
+    // fait rejeter tout le paiement, donc aucun achat n'aurait abouti au Mali.
+    methods: ['orange_ml', 'moov_ml'],
   },
   BF: {
     code: 'BF',
@@ -63,10 +66,16 @@ const COUNTRIES = {
 
 const DEFAULT_COUNTRY = 'BJ';
 
+// Moneroo refuse tout paiement en dehors de cette plage, quelle que soit la
+// methode: un tarif a moins de 100 F ne peut pas etre encaisse.
+const MIN_AMOUNT_XOF = 100;
+const MAX_AMOUNT_XOF = 1000000;
+
 /** Noms lisibles des methodes, pour la comptabilite. */
 const METHOD_LABELS = {
   mtn_bj: 'MTN MoMo Bénin',
   moov_bj: 'Moov Money Bénin',
+  celtiis_bj: 'Celtiis Cash Bénin',
   mtn_ci: "MTN MoMo Côte d'Ivoire",
   orange_ci: "Orange Money Côte d'Ivoire",
   moov_ci: "Moov Money Côte d'Ivoire",
@@ -80,7 +89,6 @@ const METHOD_LABELS = {
   wizall_sn: 'Wizall Sénégal',
   orange_ml: 'Orange Money Mali',
   moov_ml: 'Moov Money Mali',
-  mobi_cash_ml: 'Mobi Cash Mali',
   orange_bf: 'Orange Money Burkina',
   moov_bf: 'Moov Money Burkina',
   moneroo_payment_demo: 'Passerelle de démonstration',
@@ -135,6 +143,8 @@ function phoneCandidates(value) {
 module.exports = {
   COUNTRIES,
   DEFAULT_COUNTRY,
+  MIN_AMOUNT_XOF,
+  MAX_AMOUNT_XOF,
   METHOD_LABELS,
   getCountry,
   methodsFor,
