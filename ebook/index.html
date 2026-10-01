@@ -1,0 +1,1024 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="E-book pratique : créer sa plateforme de tickets Wi-Fi payés en Mobile Money avec Claude Code, du logo au routeur MikroTik.">
+<title>Lancer sa Wi-Fi Zone</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout : manuel de terrain — sommaire fixe à gauche avec progression, chapitres numérotés (la séquence est réelle), fiche projet qui remplit les prompts. */
+:root{
+  --bg:#F5F7F6; --surface:#FFFFFF; --sunk:#EAEFED; --line:#D3DCD8;
+  --fg:#15211D; --muted:#55655F;
+  --accent:#126B57; --accent-ink:#FFFFFF; --accent-soft:#DCEFE8;
+  --marker:#E3A23B; --marker-soft:#FBEFD8;
+  --warn:#B4441F; --warn-soft:#F8E3DA;
+  --code-bg:#0F1A17; --code-fg:#E3EEE9; --code-dim:#8FA59D;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Figtree", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", Consolas, "Courier New", monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1513; --surface:#151F1C; --sunk:#1B2824; --line:#2A3A35;
+  --fg:#E4ECE9; --muted:#97A9A2;
+  --accent:#4CC2A0; --accent-ink:#06231B; --accent-soft:#163A30;
+  --marker:#EDB65A; --marker-soft:#3A2D16;
+  --warn:#F0896A; --warn-soft:#3B1F16;
+  --code-bg:#08100E; --code-fg:#DCE8E3; --code-dim:#7F958D;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0E1513; --surface:#151F1C; --sunk:#1B2824; --line:#2A3A35;
+  --fg:#E4ECE9; --muted:#97A9A2;
+  --accent:#4CC2A0; --accent-ink:#06231B; --accent-soft:#163A30;
+  --marker:#EDB65A; --marker-soft:#3A2D16;
+  --warn:#F0896A; --warn-soft:#3B1F16;
+  --code-bg:#08100E; --code-fg:#DCE8E3; --code-dim:#7F958D;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16.5px;line-height:1.65;margin:0}
+a{color:var(--accent);text-underline-offset:3px}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--marker);outline-offset:2px;border-radius:4px}
+
+.shell{display:grid;grid-template-columns:290px minmax(0,1fr);max-width:1240px;margin:0 auto;gap:48px;padding-inline:24px}
+@media (max-width:900px){.shell{grid-template-columns:minmax(0,1fr);gap:0;padding-inline:16px}}
+
+/* Sommaire */
+.toc{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;max-height:100vh;overflow:auto;padding-block:28px}
+.toc .brand{font-family:var(--f-display);font-weight:800;font-size:19px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+.toc .brand svg{flex:none}
+.prog{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.prog-top{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{height:8px;background:var(--sunk);border-radius:99px;margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .3s}
+.toc ol{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:2px}
+.toc li a{display:grid;grid-template-columns:28px 1fr auto;gap:6px;align-items:baseline;padding:6px 8px;border-radius:7px;color:var(--fg);text-decoration:none;font-size:14.5px;line-height:1.35}
+.toc li a:hover{background:var(--sunk)}
+.toc li a.on{background:var(--accent-soft);color:var(--fg)}
+.toc .n{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.toc .ok{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--line);align-self:center}
+.toc .ok.done{background:var(--accent);border-color:var(--accent)}
+.toc-mobile{display:none}
+@media (max-width:900px){
+  .toc{display:none}
+  .toc-mobile{display:block;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line)}
+  .toc-mobile select{width:100%;font:inherit;font-size:15px;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+}
+
+/* Contenu */
+main{padding-block:28px 120px;min-width:0}
+.hero{padding-block:24px 8px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.eyebrow{font-family:var(--f-mono);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(34px,5.4vw,56px);line-height:1.02;letter-spacing:-.025em;margin:10px 0 16px;text-wrap:balance}
+h1 em{font-style:normal;color:var(--accent)}
+.lede{font-size:19px;color:var(--muted);max-width:62ch;margin:0 0 22px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 22px;font-size:14px;color:var(--muted);margin-bottom:22px}
+.meta b{color:var(--fg);font-weight:600}
+
+section.ch{padding-block:44px 8px;border-bottom:1px solid var(--line);scroll-margin-top:16px}
+.ch-head{display:flex;gap:16px;align-items:flex-start}
+.ch-num{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1;color:var(--marker);min-width:56px;font-variant-numeric:tabular-nums}
+h2{font-family:var(--f-display);font-weight:700;font-size:clamp(25px,3.2vw,33px);line-height:1.12;letter-spacing:-.015em;margin:2px 0 6px;text-wrap:balance}
+.ch-sub{color:var(--muted);margin:0;font-size:15.5px}
+h3{font-family:var(--f-display);font-weight:700;font-size:20px;margin:30px 0 8px;letter-spacing:-.005em}
+h4{font-size:15px;font-weight:600;margin:20px 0 4px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+p,ul,ol.steps{max-width:70ch}
+main ul{padding-left:1.2em}
+main li{margin:4px 0}
+ol.steps{counter-reset:s;list-style:none;padding:0;display:grid;gap:10px}
+ol.steps>li{counter-increment:s;position:relative;padding-left:40px;margin:0}
+ol.steps>li::before{content:counter(s);position:absolute;left:0;top:1px;width:26px;height:26px;border-radius:50%;background:var(--sunk);border:1px solid var(--line);font:500 13px/24px var(--f-mono);text-align:center;color:var(--fg)}
+kbd{font-family:var(--f-mono);font-size:.85em;background:var(--sunk);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px}
+code{font-family:var(--f-mono);font-size:.88em;background:var(--sunk);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.v{background:var(--marker-soft);color:var(--fg);border-radius:4px;padding:0 4px;font-weight:600}
+
+.note,.warn,.tip{border-radius:var(--r);padding:14px 16px;margin:18px 0;max-width:72ch;font-size:15.5px}
+.note{background:var(--accent-soft)}
+.tip{background:var(--marker-soft)}
+.warn{background:var(--warn-soft)}
+.note b:first-child,.tip b:first-child,.warn b:first-child{display:block;font-family:var(--f-mono);font-size:12px;letter-spacing:.07em;text-transform:uppercase;margin-bottom:2px}
+.warn b:first-child{color:var(--warn)}
+
+/* Bloc de code / prompt */
+.code{position:relative;margin:16px 0;border-radius:var(--r);background:var(--code-bg);color:var(--code-fg);max-width:100%}
+.code-top{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px 8px 14px;border-bottom:1px solid rgba(255,255,255,.08);font-family:var(--f-mono);font-size:12px;color:var(--code-dim);letter-spacing:.04em;text-transform:uppercase}
+.code pre{margin:0;padding:14px;overflow-x:auto;font-family:var(--f-mono);font-size:13.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.code.cmd pre{white-space:pre}
+.code.prompt .code-top{color:var(--marker)}
+.code.long pre{max-height:420px;overflow:auto}
+.copy{font:500 12.5px var(--f-body);background:rgba(255,255,255,.1);color:var(--code-fg);border:0;border-radius:6px;padding:5px 11px;cursor:pointer;text-transform:none;letter-spacing:0}
+.copy:hover{background:rgba(255,255,255,.18)}
+.copy.done{background:var(--accent);color:var(--accent-ink)}
+
+/* Fiche projet */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;margin:18px 0}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.form label{display:grid;gap:5px;font-size:13.5px;font-weight:600}
+.form label span{font-weight:400;color:var(--muted);font-size:12.5px}
+.form input,.form select{font:inherit;font-size:15px;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%;min-width:0}
+.colorrow{display:flex;gap:8px}
+.colorrow input[type=color]{width:46px;flex:none;padding:3px;height:42px}
+.swatches{display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.sw{width:30px;height:30px;border-radius:8px;border:1px solid var(--line)}
+.saved{font-size:12.5px;color:var(--muted);margin-top:10px}
+
+/* Checklist */
+.check{list-style:none;padding:0;margin:18px 0;display:grid;gap:6px;max-width:70ch}
+.check li{margin:0}
+.check label{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);cursor:pointer}
+.check input{width:18px;height:18px;margin-top:3px;accent-color:var(--accent);flex:none}
+.check label:has(input:checked){background:var(--accent-soft);border-color:transparent}
+.check label:has(input:checked) .t{text-decoration:line-through;text-decoration-color:var(--muted)}
+.check-title{font-family:var(--f-mono);font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-top:26px}
+
+/* Tableaux */
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--sunk)}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* Schéma de flux */
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:20px 0;counter-reset:f}
+.flow div{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;font-size:14px;line-height:1.4;counter-increment:f}
+.flow div::before{content:counter(f);display:block;font:700 22px var(--f-display);color:var(--marker);margin-bottom:4px}
+.flow div b{display:block;margin-bottom:2px}
+
+.phase{border:1px solid var(--line);border-radius:14px;padding:18px 18px 6px;margin:22px 0;background:var(--surface)}
+.phase>h3{margin-top:0;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.phase>h3 small{font-family:var(--f-mono);font-size:12px;font-weight:500;color:var(--accent);letter-spacing:.06em;text-transform:uppercase}
+.verify{font-size:15px}
+.verify b{font-weight:600}
+
+details.faq{border-bottom:1px solid var(--line);padding-block:12px;max-width:72ch}
+details.faq summary{cursor:pointer;font-weight:600}
+details.faq p{margin:8px 0 0}
+
+.done-banner{margin-top:28px;padding:22px;border-radius:14px;background:var(--accent);color:var(--accent-ink)}
+.done-banner h3{margin:0 0 6px;color:inherit}
+.done-banner p{margin:0}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+html{scroll-behavior:smooth}
+</style>
+</head>
+<body>
+
+<div class="toc-mobile"><label for="jump" hidden>Aller au chapitre</label><select id="jump"></select></div>
+
+<div class="shell">
+<aside class="toc" aria-label="Sommaire">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M2 8.8a15 15 0 0 1 20 0"/><path d="M5 12.6a10 10 0 0 1 14 0"/><path d="M8.5 16.3a5 5 0 0 1 7 0"/><circle cx="12" cy="19.6" r="1.2" fill="currentColor"/></svg>
+    <span>Lancer sa Wi-Fi Zone</span>
+  </div>
+  <div class="prog">
+    <div class="prog-top"><span>Progression</span><span id="progTxt">0 / 0</span></div>
+    <div class="bar"><i id="progBar"></i></div>
+  </div>
+  <ol id="tocList"></ol>
+</aside>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">E-book pratique · édition 2026</div>
+  <h1>Construis ta propre plateforme de <em>tickets Wi-Fi</em> avec Claude Code</h1>
+  <p class="lede">Du nom de ta zone jusqu'au premier ticket vendu en Mobile Money : identité visuelle, outils, prompts prêts à copier, base de données, paiement, hébergement et routeur MikroTik. Chaque étape se coche ; ta progression reste enregistrée dans ce navigateur.</p>
+  <div class="meta">
+    <span><b>Niveau</b> débutant motivé, aucun code à écrire soi-même</span>
+    <span><b>Durée</b> 3 à 7 jours selon les validations</span>
+    <span><b>Modèle</b> basé sur la plateforme Fô-Zône en production</span>
+  </div>
+</header>
+
+<!-- 00 -->
+<section class="ch" id="c0" data-title="Ce que tu vas construire">
+  <div class="ch-head"><div class="ch-num">00</div><div><h2>Ce que tu vas construire</h2><p class="ch-sub">Le fonctionnement complet, avant de toucher à quoi que ce soit.</p></div></div>
+
+  <p>Une Wi-Fi Zone vend l'accès internet par tickets : un identifiant et un mot de passe valables une durée donnée (1 h, 24 h, 7 jours…). Aujourd'hui beaucoup de gérants vendent ces tickets à la main, en papier. Ta plateforme automatise tout : le client paie en Mobile Money depuis son téléphone et reçoit son ticket en quelques secondes, sans que tu sois là.</p>
+
+  <h3>Le parcours d'un client</h3>
+  <div class="flow">
+    <div><b>Il se connecte au Wi-Fi</b>Le routeur MikroTik affiche ta page de connexion (portail captif).</div>
+    <div><b>Il clique « Acheter »</b>Il arrive sur ta page d'achat, choisit un tarif, saisit son numéro.</div>
+    <div><b>Il paie</b>Moneroo affiche MTN, Moov, Orange, Wave… selon le pays. Il valide sur son téléphone.</div>
+    <div><b>Moneroo prévient ton serveur</b>Un webhook signé confirme le paiement à ton API.</div>
+    <div><b>Le ticket est attribué</b>Ton serveur réserve un ticket libre du bon tarif, en une seule opération.</div>
+    <div><b>Il se connecte</b>Son identifiant s'affiche ; il le saisit sur le portail. Internet est ouvert.</div>
+  </div>
+
+  <h3>Les briques du système</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Brique</th><th>Rôle</th><th>Outil utilisé</th></tr></thead>
+    <tbody>
+      <tr><td>Frontend</td><td>Page d'accueil, page d'achat, tableau de bord du gérant</td><td>React + Vite + Tailwind, hébergé sur Vercel</td></tr>
+      <tr><td>Backend (API)</td><td>Paiements, attribution des tickets, comptabilité, sécurité</td><td>Node.js + Express, hébergé sur Render</td></tr>
+      <tr><td>Base de données</td><td>Zones, tarifs, tickets, paiements, retraits</td><td>Supabase (PostgreSQL)</td></tr>
+      <tr><td>Agrégateur de paiement</td><td>Encaisse le Mobile Money dans 6 pays</td><td>Moneroo</td></tr>
+      <tr><td>Routeur</td><td>Diffuse le Wi-Fi, bloque l'accès tant que le client n'a pas de ticket</td><td>MikroTik (Hotspot)</td></tr>
+      <tr><td>Développeur</td><td>Écrit tout le code à partir de tes instructions</td><td>Claude Code dans VS Code</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Les fonctionnalités finales</h3>
+  <ul>
+    <li><b>Plusieurs zones Wi-Fi</b> par compte, chacune avec son pays, son routeur et son numéro de gérant.</li>
+    <li><b>Tarifs par zone</b> (nom, prix, durée). Un tarif déjà vendu peut être supprimé sans casser l'historique.</li>
+    <li><b>Import de tickets</b> par fichier CSV, avec statuts libre / vendu / expiré et alerte de stock bas.</li>
+    <li><b>Paiement Mobile Money</b> multi-pays : Bénin, Côte d'Ivoire, Togo, Sénégal, Mali, Burkina Faso.</li>
+    <li><b>Attribution atomique</b> : impossible de vendre deux fois le même ticket, même avec 50 achats simultanés.</li>
+    <li><b>Retrouver son ticket</b> avec le numéro de téléphone utilisé pour payer.</li>
+    <li><b>Comptabilité</b> : chiffre d'affaires brut et net, ventes par jour, répartition par opérateur, export CSV.</li>
+    <li><b>Générateur de portail captif</b> : le gérant télécharge ses pages MikroTik déjà personnalisées.</li>
+    <li><b>Option plateforme</b> : ouvrir ton système à d'autres gérants, prendre une commission, gérer leurs retraits.</li>
+  </ul>
+</section>
+
+<!-- 01 -->
+<section class="ch" id="c1" data-title="Prérequis et budget">
+  <div class="ch-head"><div class="ch-num">01</div><div><h2>Prérequis et budget</h2><p class="ch-sub">Ce qu'il te faut avant de commencer.</p></div></div>
+
+  <h3>Matériel</h3>
+  <ul>
+    <li>Un <b>ordinateur</b> Windows 10/11 ou Mac, 8 Go de RAM minimum, connexion internet stable.</li>
+    <li>Un <b>routeur MikroTik</b> (hAP ax lite, hAP ac², hEX + point d'accès…) avec RouterOS 7.</li>
+    <li>Une <b>source internet</b> pour la zone : Starlink, fibre, 4G/5G.</li>
+    <li>Un <b>téléphone</b> avec un compte Mobile Money pour tester un vrai paiement.</li>
+  </ul>
+
+  <h3>Comptes à ouvrir</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Service</th><th>Pour quoi</th><th>Coût indicatif</th></tr></thead>
+    <tbody>
+      <tr><td>Nom de domaine (Namecheap, Hostinger, OVH…)</td><td>L'adresse de ta plateforme, ex. <span class="v" data-v="DOMAINE"></span></td><td class="num">8 à 15 $ / an</td></tr>
+      <tr><td>Claude (plan Pro ou Max)</td><td>Claude Code, ton développeur</td><td class="num">Pro ≈ 20 $ / mois</td></tr>
+      <tr><td>GitHub</td><td>Stocker ton code, relier Vercel et Render</td><td class="num">Gratuit</td></tr>
+      <tr><td>Supabase</td><td>Base de données</td><td class="num">Gratuit pour démarrer</td></tr>
+      <tr><td>Vercel</td><td>Héberger le frontend</td><td class="num">Hobby gratuit · Pro ≈ 20 $ / mois</td></tr>
+      <tr><td>Render</td><td>Héberger l'API</td><td class="num">Starter ≈ 7 $ / mois</td></tr>
+      <tr><td>Moneroo</td><td>Encaisser le Mobile Money</td><td class="num">Commission par transaction</td></tr>
+    </tbody>
+  </table></div>
+  <p class="saved">Prix indicatifs relevés en 2026 : vérifie sur chaque site avant de payer.</p>
+
+  <div class="warn"><b>À savoir</b>Le plan gratuit de Render met le serveur en veille après quelques minutes sans visite. Le premier paiement qui arrive doit alors attendre son réveil (près d'une minute), et le client croit que ça n'a pas marché. Pour une zone qui vend vraiment, prends le plan payant dès la mise en ligne. Le plan Hobby de Vercel est réservé à un usage non commercial : passe en Pro quand tu encaisses.</div>
+
+  <p class="check-title">Checklist du chapitre</p>
+  <ul class="check" data-ch="c1">
+    <li><label><input type="checkbox" id="k1a"><span class="t">J'ai un routeur MikroTik et une source internet pour la zone</span></label></li>
+    <li><label><input type="checkbox" id="k1b"><span class="t">J'ai une adresse e-mail dédiée au projet (pour tous les comptes)</span></label></li>
+    <li><label><input type="checkbox" id="k1c"><span class="t">J'ai prévu le budget mensuel (Claude + hébergement)</span></label></li>
+  </ul>
+</section>
+
+<!-- 02 -->
+<section class="ch" id="c2" data-title="Nom, logo et charte">
+  <div class="ch-head"><div class="ch-num">02</div><div><h2>Nom, logo et charte graphique</h2><p class="ch-sub">L'identité de ta zone. Tout le reste en découle.</p></div></div>
+
+  <h3>Choisir le nom</h3>
+  <ul>
+    <li>Court (2 syllabes idéalement), facile à dire au téléphone et à taper sur un clavier mobile.</li>
+    <li>Le nom de domaine en <code>.com</code>, <code>.org</code>, <code>.net</code> ou ton extension pays (<code>.bj</code>, <code>.ci</code>…) doit être libre. Vérifie-le avant de t'attacher au nom.</li>
+    <li>Pas d'accents ni de tirets dans le domaine : « Fô-Zône » devient <code>fozone.org</code>.</li>
+    <li>Vérifie que le nom n'est pas déjà une marque connue dans ton pays.</li>
+  </ul>
+
+  <h3>Le logo</h3>
+  <p>Il te faut trois fichiers : le logo complet (symbole + nom), le symbole seul en carré (pour l'icône d'onglet et l'écran du téléphone), et une version blanche pour les fonds sombres. Format idéal : <b>SVG</b>, sinon PNG 1024 × 1024 sur fond transparent.</p>
+  <ul>
+    <li><b>Avec un graphiste</b> : compte 15 000 à 50 000 F CFA. Demande les fichiers sources.</li>
+    <li><b>Avec Claude</b> : Claude peut dessiner un logo simple en SVG. Utilise le prompt ci-dessous sur claude.ai.</li>
+    <li><b>Avec Canva</b> : rapide, mais exporte en SVG ou PNG transparent.</li>
+  </ul>
+
+  <h3>La fiche de ton projet</h3>
+  <p>Remplis ces champs. Tous les prompts et commandes de l'e-book se mettent à jour avec tes valeurs, et la fiche reste enregistrée dans ce navigateur.</p>
+  <div class="card">
+    <div class="form">
+      <label for="f-nom">Nom de la zone<span>Tel qu'affiché aux clients</span><input id="f-nom" data-key="NOM" value="Fô-Zône"></label>
+      <label for="f-domaine">Nom de domaine<span>Sans https:// ni www</span><input id="f-domaine" data-key="DOMAINE" value="fozone.org"></label>
+      <label for="f-dossier">Nom du dossier du projet<span>Minuscules, sans espace</span><input id="f-dossier" data-key="DOSSIER" value="fozone"></label>
+      <label for="f-pays">Pays principal<span>Fixe les opérateurs proposés</span>
+        <select id="f-pays" data-key="PAYS">
+          <option>Bénin</option><option>Côte d'Ivoire</option><option>Togo</option><option>Sénégal</option><option>Mali</option><option>Burkina Faso</option>
+        </select></label>
+      <label for="f-c1">Couleur principale<span>Boutons, liens, éléments actifs</span><span class="colorrow"><input type="color" id="f-c1p" aria-label="Choisir la couleur principale"><input id="f-c1" data-key="C1" value="#126B57"></span></label>
+      <label for="f-c2">Couleur secondaire<span>Accents, mises en avant</span><span class="colorrow"><input type="color" id="f-c2p" aria-label="Choisir la couleur secondaire"><input id="f-c2" data-key="C2" value="#E3A23B"></span></label>
+      <label for="f-wa">Numéro WhatsApp d'assistance<span>Format international</span><input id="f-wa" data-key="WA" value="+229 01 00 00 00 00"></label>
+      <label for="f-style">Ambiance visuelle<span>Une phrase pour guider Claude</span><input id="f-style" data-key="STYLE" value="moderne, sobre, rassurant, lisible en plein soleil"></label>
+    </div>
+    <div class="swatches"><span class="sw" id="sw1"></span><span class="sw" id="sw2"></span><span>Aperçu de ta palette</span></div>
+    <p class="saved" id="savedMsg">Les valeurs par défaut sont celles de Fô-Zône, à titre d'exemple.</p>
+  </div>
+
+  <h3>Prompt : créer le logo avec Claude</h3>
+  <p>Sur <a href="https://claude.ai" target="_blank" rel="noopener">claude.ai</a>, dans une nouvelle conversation :</p>
+  <div class="code prompt"><div class="code-top"><span>Prompt · claude.ai</span><button class="copy">Copier</button></div><pre class="tpl">Je lance « {{NOM}} », une plateforme de vente de tickets Wi-Fi payés en Mobile Money ({{PAYS}}). Ambiance : {{STYLE}}. Couleurs : {{C1}} (principale) et {{C2}} (secondaire).
+
+Propose-moi 4 pistes de logo, chacune en SVG autonome (viewBox 0 0 512 512, pas de police externe, formes vectorisées) :
+1. un symbole seul, lisible à 32 px (icône d'onglet) ;
+2. le symbole + le nom « {{NOM}} » à côté.
+Évite les clichés (ondes Wi-Fi génériques seules, globe). Pour chaque piste, explique l'idée en une phrase.
+Quand j'aurai choisi, donne-moi aussi la version blanche sur fond transparent.</pre></div>
+
+  <h3>La charte en une page</h3>
+  <p>Avant le code, fige ces décisions. Claude s'en servira pour la maquette.</p>
+  <ul>
+    <li><b>2 couleurs de marque</b> (codes hexadécimaux) + un gris foncé pour le texte.</li>
+    <li><b>2 polices</b> Google Fonts : une pour les titres, une pour le texte. Exemples sûrs : Poppins / Inter, Sora / Nunito Sans, Outfit / DM Sans.</li>
+    <li><b>Le ton</b> : tutoiement ou vouvoiement des clients, phrases courtes.</li>
+    <li><b>Thème sombre</b> : oui ou non (Fô-Zône propose les deux avec une bascule).</li>
+  </ul>
+
+  <p class="check-title">Checklist du chapitre</p>
+  <ul class="check" data-ch="c2">
+    <li><label><input type="checkbox" id="k2a"><span class="t">Le nom est choisi et le domaine est disponible</span></label></li>
+    <li><label><input type="checkbox" id="k2b"><span class="t">J'ai le logo (complet, symbole seul, version blanche)</span></label></li>
+    <li><label><input type="checkbox" id="k2c"><span class="t">Mes 2 couleurs et mes 2 polices sont fixées</span></label></li>
+    <li><label><input type="checkbox" id="k2d"><span class="t">La fiche projet ci-dessus est remplie</span></label></li>
+  </ul>
+</section>
+
+<!-- 03 -->
+<section class="ch" id="c3" data-title="Acheter le nom de domaine">
+  <div class="ch-head"><div class="ch-num">03</div><div><h2>Acheter le nom de domaine</h2><p class="ch-sub">À faire maintenant : la configuration DNS viendra au chapitre 11.</p></div></div>
+  <ol class="steps">
+    <li>Va sur un registraire : <a href="https://www.namecheap.com" target="_blank" rel="noopener">Namecheap</a>, <a href="https://www.hostinger.fr" target="_blank" rel="noopener">Hostinger</a> ou <a href="https://www.ovhcloud.com/fr/domains/" target="_blank" rel="noopener">OVH</a>.</li>
+    <li>Cherche <span class="v" data-v="DOMAINE"></span>. S'il est pris, essaie une autre extension ou une variante courte.</li>
+    <li>Achète-le pour 1 an minimum. Active le <b>renouvellement automatique</b> : un domaine expiré coupe ta plateforme et les paiements.</li>
+    <li>Refuse les options d'hébergement et d'e-mail proposées au panier : tu n'en as pas besoin.</li>
+    <li>Garde l'onglet « DNS » ou « Gestion DNS » de ton registraire : tu y reviendras.</li>
+  </ol>
+  <div class="note"><b>Plan d'adresses</b>Ta plateforme utilisera deux adresses : <span class="v" data-v="DOMAINE"></span> pour le site (Vercel) et <span class="v" data-v="API"></span> pour l'API (Render). Un seul domaine suffit, le sous-domaine <code>api</code> est gratuit.</div>
+  <p class="check-title">Checklist du chapitre</p>
+  <ul class="check" data-ch="c3">
+    <li><label><input type="checkbox" id="k3a"><span class="t">Le domaine est acheté, renouvellement automatique activé</span></label></li>
+  </ul>
+</section>
+
+<!-- 04 -->
+<section class="ch" id="c4" data-title="Abonnement Claude">
+  <div class="ch-head"><div class="ch-num">04</div><div><h2>S'abonner à Claude</h2><p class="ch-sub">Claude Code est inclus dans les plans payants de Claude.</p></div></div>
+  <ol class="steps">
+    <li>Va sur <a href="https://claude.ai" target="_blank" rel="noopener">claude.ai</a> et crée un compte avec l'e-mail du projet.</li>
+    <li>Ouvre <b>Paramètres → Abonnement</b> (ou clique « Upgrade »).</li>
+    <li>Choisis <b>Pro</b> pour commencer. Si tu atteins souvent la limite d'utilisation pendant le développement, passe à <b>Max</b>.</li>
+    <li>Paie par carte bancaire (Visa/Mastercard, carte prépayée ou virtuelle acceptée selon ta banque).</li>
+  </ol>
+  <div class="tip"><b>Conseil</b>Les limites d'utilisation se réinitialisent toutes les quelques heures. Si Claude te dit que la limite est atteinte, fais une pause : il reprendra exactement là où il s'était arrêté, car tout est dans tes fichiers et dans Git.</div>
+  <p class="check-title">Checklist du chapitre</p>
+  <ul class="check" data-ch="c4">
+    <li><label><input type="checkbox" id="k4a"><span class="t">Mon compte Claude est actif sur un plan Pro ou Max</span></label></li>
+  </ul>
+</section>
+
+<!-- 05 -->
+<section class="ch" id="c5" data-title="Installer les outils">
+  <div class="ch-head"><div class="ch-num">05</div><div><h2>Installer VS Code et Claude Code</h2><p class="ch-sub">Quatre logiciels, une seule fois.</p></div></div>
+
+  <h3>1. Node.js</h3>
+  <p>Le moteur qui fait tourner ton API et construit ton site. Télécharge la version <b>LTS</b> sur <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a>, puis installe en laissant les options par défaut.</p>
+
+  <h3>2. Git</h3>
+  <p>Il garde l'historique de chaque modification et permet de revenir en arrière si Claude casse quelque chose. Windows : <a href="https://git-scm.com/download/win" target="_blank" rel="noopener">git-scm.com/download/win</a>, options par défaut. Mac : il est proposé automatiquement à la première utilisation.</p>
+
+  <h3>3. Visual Studio Code</h3>
+  <p>Ton éditeur. Télécharge-le sur <a href="https://code.visualstudio.com" target="_blank" rel="noopener">code.visualstudio.com</a>. Pendant l'installation Windows, coche <b>« Ajouter l'action Ouvrir avec Code »</b> et <b>« Ajouter à PATH »</b>.</p>
+
+  <h3>4. L'extension Claude Code</h3>
+  <ol class="steps">
+    <li>Ouvre VS Code, clique sur l'icône <b>Extensions</b> dans la barre de gauche (ou <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd>).</li>
+    <li>Cherche <b>Claude Code</b>, vérifie que l'éditeur est <b>Anthropic</b>, clique <b>Installer</b>.</li>
+    <li>Une icône Claude apparaît en haut à droite de l'éditeur ou dans la barre latérale. Clique dessus.</li>
+    <li>Choisis <b>« Se connecter avec un compte Claude »</b>. Le navigateur s'ouvre : autorise l'accès, reviens dans VS Code.</li>
+  </ol>
+
+  <h3>Vérifier que tout est en place</h3>
+  <p>Dans VS Code, ouvre un terminal : menu <b>Terminal → Nouveau terminal</b>. Tape ces commandes une par une ; chacune doit afficher un numéro de version.</p>
+  <div class="code cmd"><div class="code-top"><span>Terminal</span><button class="copy">Copier</button></div><pre>node -v
+npm -v
+git --version</pre></div>
+  <p>Configure ensuite ton identité Git (une seule fois) :</p>
+  <div class="code cmd"><div class="code-top"><span>Terminal</span><button class="copy">Copier</button></div><pre>git config --global user.name "Ton Nom"
+git config --global user.email "ton-email@exemple.com"</pre></div>
+
+  <div class="note"><b>Alternative</b>Claude Code existe aussi en ligne de commande et dans l'application de bureau Claude. L'e-book utilise l'extension VS Code : tu vois les fichiers changer à côté de la conversation, et tu valides chaque modification.</div>
+
+  <h3>Réglages utiles de l'extension</h3>
+  <ul>
+    <li><b>Mode de permissions</b> : au début, laisse Claude demander avant chaque commande. Quand tu es à l'aise, autorise les commandes courantes (<code>npm install</code>, <code>git commit</code>).</li>
+    <li><b>Mode plan</b> : pour les grosses étapes, demande d'abord un plan (bouton ou <kbd>Shift</kbd>+<kbd>Tab</kbd> selon la version). Claude propose, tu valides, puis il code.</li>
+    <li><b>Références de fichiers</b> : tape <code>@</code> puis un nom de fichier pour montrer un fichier précis à Claude.</li>
+  </ul>
+
+  <p class="check-title">Checklist du chapitre</p>
+  <ul class="check" data-ch="c5">
+    <li><label><input type="checkbox" id="k5a"><span class="t">node, npm et git affichent leur version</span></label></li>
+    <li><label><input type="checkbox" id="k5b"><span class="t">VS Code est installé, l'extension Claude Code est connectée à mon compte</span></label></li>
+    <li><label><input type="checkbox" id="k5c"><span class="t">Mon identité Git est configurée</span></label></li>
+  </ul>
+</section>
+
+<!-- 06 -->
+<section class="ch" id="c6" data-title="Créer le projet">
+  <div class="ch-head"><div class="ch-num">06</div><div><h2>Créer le dossier du projet</h2><p class="ch-sub">Un dossier vide, ouvert dans VS Code, avec ton logo dedans.</p></div></div>
+  <ol class="steps">
+    <li>Crée un dossier <code>Projets</code> à un endroit simple, par exemple <code>D:\Projets</code> (évite les chemins avec espaces ou accents).</li>
+    <li>Dedans, crée le dossier <code class="v" data-v="DOSSIER"></code>.</li>
+    <li>Dans ce dossier, crée un sous-dossier <code>brand</code> et copie-y ton logo : <code>logo.svg</code>, <code>logo-icon.svg</code>, <code>logo-white.svg</code>.</li>
+    <li>Dans VS Code : <b>Fichier → Ouvrir le dossier…</b> et choisis <code class="v" data-v="DOSSIER"></code>. Accepte « Faire confiance aux auteurs ».</li>
+    <li>Ouvre le panneau Claude Code. Tu es prêt à envoyer le premier prompt.</li>
+  </ol>
+  <p>Ou, depuis le terminal :</p>
+  <div class="code cmd"><div class="code-top"><span>Terminal</span><button class="copy">Copier</button></div><pre class="tpl">mkdir D:\Projets\{{DOSSIER}}
+cd D:\Projets\{{DOSSIER}}
+mkdir brand
+code .</pre></div>
+  <div class="tip"><b>Ne lance pas git init toi-même</b>Le premier prompt demande à Claude de le faire, avec le bon fichier <code>.gitignore</code> dès le départ. C'est ce fichier qui empêche tes clés secrètes de partir un jour sur GitHub.</div>
+  <p class="check-title">Checklist du chapitre</p>
+  <ul class="check" data-ch="c6">
+    <li><label><input type="checkbox" id="k6a"><span class="t">Le dossier du projet est ouvert dans VS Code, le logo est dans <code>brand/</code></span></label></li>
+  </ul>
+</section>
+
+<!-- 07 -->
+<section class="ch" id="c7" data-title="Le prompt de départ">
+  <div class="ch-head"><div class="ch-num">07</div><div><h2>Le prompt de départ</h2><p class="ch-sub">Il pose le cadre de tout le projet. Copie-le tel quel dans Claude Code.</p></div></div>
+  <p>Ce prompt décrit le produit, impose la technique, fixe les règles de travail et lance seulement la <b>phase 1</b> : la maquette. Claude s'arrête ensuite et attend ta validation. Ce découpage par phases est la clé : tu vérifies à chaque étape au lieu de découvrir 50 problèmes à la fin.</p>
+  <div class="code prompt long"><div class="code-top"><span>Prompt n°1 · Claude Code</span><button class="copy">Copier</button></div><pre class="tpl">Tu es le développeur principal de « {{NOM}} », une plateforme de vente automatisée de tickets Wi-Fi payés en Mobile Money, reliée à des routeurs MikroTik (hotspot). Je ne suis pas développeur : explique simplement, et dis-moi toujours comment tester ce que tu as fait.
+
+# Le produit
+- Un gérant crée ses zones Wi-Fi (nom, pays, adresse, IP ou nom d'hôte du routeur, numéro du gérant, position GPS facultative).
+- Pour chaque zone, il crée des tarifs (nom, prix en F CFA, durée en heures) et importe ses tickets MikroTik (identifiant + mot de passe + profil) par fichier CSV.
+- Le client connecté au Wi-Fi ouvre la page d'achat de la zone, choisit un tarif, saisit son numéro, paie en Mobile Money via l'agrégateur Moneroo, et reçoit immédiatement un ticket du tarif payé.
+- Le client peut retrouver un ticket déjà acheté avec son numéro de téléphone.
+- Le gérant a un tableau de bord : ventes du jour, chiffre d'affaires brut et net de commission, tickets restants, alertes de stock bas, comptabilité par jour et par opérateur, export CSV.
+- Le gérant génère depuis le tableau de bord ses pages de portail captif MikroTik (login.html, redirect.html) personnalisées pour sa zone.
+
+# Identité
+- Nom : {{NOM}} · domaine : {{DOMAINE}} (site) et {{API}} (API)
+- Pays principal : {{PAYS}} · devise : XOF (F CFA, pas de centimes)
+- Couleurs : principale {{C1}}, secondaire {{C2}} · ambiance : {{STYLE}}
+- Logo : fichiers dans le dossier brand/
+- Interface en français, pensée d'abord pour le téléphone (la page d'achat est ouverte depuis le Wi-Fi sur un mobile), thème clair et sombre avec bascule.
+- WhatsApp d'assistance : {{WA}}
+
+# Technique imposée
+- Monorepo : dossier frontend/ (React 18 + Vite + Tailwind CSS + React Router, icônes lucide-react, graphiques recharts) et dossier backend/ (Node.js + Express, en CommonJS).
+- Base de données : Supabase (PostgreSQL). Le backend y accède uniquement avec la clé service_role ; l'autorisation est vérifiée dans le code (chaque zone a un owner_id). Le frontend ne parle jamais directement à la base : il passe par l'API.
+- Authentification : JWT + mots de passe hachés avec bcrypt.
+- Paiement : Moneroo (API REST + webhooks signés).
+- Hébergement prévu : frontend sur Vercel, backend sur Render.
+
+# Règles de travail
+1. Commence par : git init, un .gitignore (node_modules, .env, .env.*, sauf les fichiers .env.example, logs, dist), un README.md et un fichier CLAUDE.md qui résume ce brief et ces règles pour les sessions futures.
+2. On avance par phases. À la fin de chaque phase : arrête-toi, résume ce qui a été fait, donne-moi les étapes exactes pour tester, et attends que j'écrive « validé ». Ne commence jamais la phase suivante sans mon accord.
+3. Quand je valide une phase, fais un commit Git avec un message clair en français.
+4. Aucun secret dans le code : tout passe par des variables d'environnement, documentées dans backend/.env.example et frontend/.env.example.
+5. Si une décision te semble risquée ou ambiguë, pose-moi la question au lieu de deviner.
+
+# Phase 1 : maquette (maintenant)
+Construis uniquement le frontend, avec des données d'exemple en dur (aucun backend, aucune base) :
+- Page d'accueil publique de {{NOM}} (présentation, comment ça marche en 3 étapes, bouton « Acheter un ticket », lien « Retrouver mon ticket »).
+- Page d'achat d'une zone (/acheter/:zoneId) : liste des tarifs en cartes, champ numéro de téléphone avec indicatif du pays, bouton payer.
+- Page de retour de paiement : état « paiement en cours », puis ticket affiché (identifiant + mot de passe en gros, bouton copier, rappel de la durée).
+- Page « Retrouver mon ticket » par numéro.
+- Connexion et inscription du gérant.
+- Espace gérant avec menu latéral (repliable sur mobile) : Tableau de bord, Zones Wi-Fi, Tarifs, Tickets, Comptabilité, Portail captif, Profil.
+Applique la charte : couleurs, logo, polices Google Fonts cohérentes avec l'ambiance. Lance le serveur de développement et donne-moi l'adresse à ouvrir.</pre></div>
+
+  <h3>Ce qui va se passer</h3>
+  <ol class="steps">
+    <li>Claude lit le dossier, puis propose de lancer des commandes (<code>git init</code>, <code>npm create vite</code>, <code>npm install</code>…). Accepte-les.</li>
+    <li>Il crée les fichiers. Tu les vois apparaître dans l'explorateur à gauche.</li>
+    <li>Il lance <code>npm run dev</code> et te donne une adresse du type <code>http://localhost:5173</code>. Ouvre-la dans ton navigateur.</li>
+    <li>Il s'arrête et attend ta validation.</li>
+  </ol>
+  <div class="note"><b>Si Claude s'arrête au milieu</b>Écris simplement « continue ». S'il bloque sur une erreur, copie le message d'erreur complet du terminal et colle-le-lui.</div>
+  <p class="check-title">Checklist du chapitre</p>
+  <ul class="check" data-ch="c7">
+    <li><label><input type="checkbox" id="k7a"><span class="t">Le prompt n°1 est envoyé, git init est fait, CLAUDE.md existe</span></label></li>
+    <li><label><input type="checkbox" id="k7b"><span class="t">La maquette s'ouvre dans mon navigateur</span></label></li>
+  </ul>
+</section>
+
+<!-- 08 -->
+<section class="ch" id="c8" data-title="Valider la maquette">
+  <div class="ch-head"><div class="ch-num">08</div><div><h2>Valider la maquette</h2><p class="ch-sub">C'est le moment le moins cher pour tout changer.</p></div></div>
+  <p>Avant d'écrire la moindre ligne de logique, l'apparence doit te plaire. Changer une couleur maintenant prend 30 secondes ; après la phase 5, ça touche 40 fichiers.</p>
+
+  <h3>Ce qu'il faut vérifier</h3>
+  <ul>
+    <li><b>Sur téléphone</b> : dans le navigateur, <kbd>F12</kbd> puis l'icône téléphone (mode responsive), largeur 375 px. La page d'achat doit être parfaite sur mobile : c'est là que tes clients paient.</li>
+    <li><b>Couleurs</b> : le texte reste lisible partout, en clair comme en sombre. Les boutons « Payer » se voient au premier coup d'œil.</li>
+    <li><b>Logo</b> : net, bien proportionné, présent dans l'onglet du navigateur.</li>
+    <li><b>Textes</b> : clairs pour quelqu'un qui n'a jamais acheté de ticket en ligne.</li>
+  </ul>
+
+  <h3>Prompts de retouche</h3>
+  <p>Sois précis : une page, un problème, le résultat attendu. Tu peux aussi coller une capture d'écran dans la conversation.</p>
+  <div class="code prompt"><div class="code-top"><span>Exemples · Claude Code</span><button class="copy">Copier</button></div><pre class="tpl">Sur la page d'achat, les cartes de tarifs sont trop petites sur mobile : affiche-les en une colonne pleine largeur sous 480 px, prix en très gros, durée en dessous.
+
+Le vert {{C1}} est trop clair sur fond blanc pour le texte : garde-le pour les boutons mais utilise une version plus foncée pour les liens.
+
+En thème sombre, le tableau de bord manque de contraste entre les cartes et le fond. Corrige-le sans toucher au thème clair.</pre></div>
+  <p>Quand tout te plaît :</p>
+  <div class="code prompt"><div class="code-top"><span>Validation · Claude Code</span><button class="copy">Copier</button></div><pre>Validé. Fais le commit de la phase 1, puis décris-moi la phase 2 avant de la commencer.</pre></div>
+  <p class="check-title">Checklist du chapitre</p>
+  <ul class="check" data-ch="c8">
+    <li><label><input type="checkbox" id="k8a"><span class="t">La maquette est vérifiée sur mobile, en clair et en sombre</span></label></li>
+    <li><label><input type="checkbox" id="k8b"><span class="t">J'ai validé et Claude a fait le commit de la phase 1</span></label></li>
+  </ul>
+</section>
+
+<!-- 09 -->
+<section class="ch" id="c9" data-title="Supabase et Moneroo">
+  <div class="ch-head"><div class="ch-num">09</div><div><h2>Créer Supabase et Moneroo</h2><p class="ch-sub">Les deux services dont le code aura besoin pour fonctionner.</p></div></div>
+
+  <h3>Supabase (base de données)</h3>
+  <ol class="steps">
+    <li>Va sur <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a>, connecte-toi avec GitHub (crée d'abord ton compte GitHub sur <a href="https://github.com" target="_blank" rel="noopener">github.com</a>).</li>
+    <li><b>New project</b> : nom <code class="v" data-v="DOSSIER"></code>, mot de passe de base de données fort (garde-le dans un gestionnaire de mots de passe), région la plus proche (Europe, ex. Francfort ou Paris).</li>
+    <li>Attends 2 minutes la création, puis va dans <b>Project Settings → API</b> (ou « API Keys »).</li>
+    <li>Note trois valeurs : <b>Project URL</b>, la clé <b>anon / publishable</b> et la clé <b>service_role / secret</b>.</li>
+  </ol>
+  <div class="warn"><b>Clé service_role</b>Elle donne tous les droits sur ta base. Elle ne va que dans le fichier <code>backend/.env</code> et dans les variables de Render. Jamais dans le frontend, jamais dans une capture d'écran, jamais dans un message.</div>
+
+  <h3>Moneroo (paiement)</h3>
+  <ol class="steps">
+    <li>Crée un compte sur <a href="https://moneroo.io" target="_blank" rel="noopener">moneroo.io</a>.</li>
+    <li>Lance la <b>vérification de ton entreprise</b> (KYC) tout de suite : pièce d'identité, justificatif d'activité. Elle peut prendre plusieurs jours et elle est obligatoire pour encaisser de vrais paiements.</li>
+    <li>En attendant, reste en mode <b>test (sandbox)</b> : dans <b>Developers → API Keys</b>, copie la clé secrète de test (elle commence par <code>test_</code>). Une passerelle de démonstration permet de simuler des paiements.</li>
+    <li>Dans les réglages de paiement, active les <b>méthodes</b> de ton pays (MTN, Moov, Orange, Wave…). Une méthode non activée n'apparaît pas aux clients, même si ton code la demande.</li>
+    <li>Le webhook se configure au chapitre 11, quand ton API aura une adresse publique.</li>
+  </ol>
+
+  <h3>Les méthodes par pays</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Pays</th><th>Indicatif</th><th>Codes Moneroo</th></tr></thead>
+    <tbody>
+      <tr><td>Bénin</td><td class="num">229</td><td><code>mtn_bj</code> <code>moov_bj</code> <code>celtiis_bj</code></td></tr>
+      <tr><td>Côte d'Ivoire</td><td class="num">225</td><td><code>mtn_ci</code> <code>orange_ci</code> <code>moov_ci</code> <code>wave_ci</code></td></tr>
+      <tr><td>Togo</td><td class="num">228</td><td><code>moov_tg</code> <code>togocel</code></td></tr>
+      <tr><td>Sénégal</td><td class="num">221</td><td><code>orange_sn</code> <code>wave_sn</code> <code>freemoney_sn</code> <code>e_money_sn</code> <code>wizall_sn</code></td></tr>
+      <tr><td>Mali</td><td class="num">223</td><td><code>orange_ml</code> <code>moov_ml</code></td></tr>
+      <tr><td>Burkina Faso</td><td class="num">226</td><td><code>orange_bf</code> <code>moov_bf</code></td></tr>
+    </tbody>
+  </table></div>
+  <div class="warn"><b>Leçon apprise en production</b>Un seul code de méthode inconnu de Moneroo fait rejeter tout le paiement. Fô-Zône l'a vécu avec un code Mali présent dans la documentation mais refusé par l'API : aucun achat n'aboutissait. Teste chaque pays que tu ouvres. Moneroo refuse aussi tout montant inférieur à 100 F CFA.</div>
+
+  <p class="check-title">Checklist du chapitre</p>
+  <ul class="check" data-ch="c9">
+    <li><label><input type="checkbox" id="k9a"><span class="t">Projet Supabase créé, URL et clés notées en lieu sûr</span></label></li>
+    <li><label><input type="checkbox" id="k9b"><span class="t">Compte Moneroo créé, KYC lancé, clé de test récupérée</span></label></li>
+    <li><label><input type="checkbox" id="k9c"><span class="t">Méthodes de paiement de mon pays activées sur Moneroo</span></label></li>
+  </ul>
+</section>
+
+<!-- 10 -->
+<section class="ch" id="c10" data-title="Construire les fonctions">
+  <div class="ch-head"><div class="ch-num">10</div><div><h2>Construire les fonctions, phase par phase</h2><p class="ch-sub">Un prompt par phase. Teste, valide, puis passe à la suivante.</p></div></div>
+  <p>Chaque phase ci-dessous contient le prompt à envoyer et la façon de vérifier le résultat. Ne saute pas les tests : une erreur trouvée en phase 3 coûte une minute, la même trouvée après la mise en ligne coûte des clients.</p>
+
+  <div class="phase">
+    <h3><small>Phase 2</small> Base de données</h3>
+    <div class="code prompt long"><div class="code-top"><span>Prompt · Phase 2</span><button class="copy">Copier</button></div><pre class="tpl">Phase 2 : la base de données Supabase.
+Écris backend/database/schema.sql, à exécuter dans le SQL Editor de Supabase, avec :
+- users : id uuid, email unique, mot de passe haché, nom, téléphone, rôle (admin, super_admin), dates.
+- wifi_zones : id, owner_id → users, nom, pays (code BJ, CI, TG, SN, ML, BF), adresse, router_ip (accepte une IP ou un nom d'hôte), téléphone du gérant, latitude/longitude facultatives, actif, dates.
+- pricings : id, wifi_zone_id, nom, montant (entier, F CFA, minimum 100), durée en heures, profil MikroTik associé, actif.
+- tickets : id, wifi_zone_id, pricing_id, username, password, profile, statut (free, reserved, sold, expired), payment_id, sold_at. Unicité (wifi_zone_id, username).
+- payments : id, moneroo_payment_id unique, wifi_zone_id, pricing_id, montant, téléphone normalisé, méthode réellement utilisée (code Moneroo), statut (pending, completed, failed, cancelled), ticket_id, et un instantané du tarif au moment de la vente (pricing_name, pricing_duration_hours) pour que supprimer un tarif ne casse jamais l'historique.
+- payment_idempotency : clé unique (événement + id de paiement), pour ne jamais traiter deux fois le même webhook.
+- Une fonction PostgreSQL assign_ticket_atomic(zone, tarif, paiement) qui choisit UN ticket libre de ce tarif avec FOR UPDATE SKIP LOCKED, le passe en sold, le lie au paiement, et ne renvoie rien s'il n'y en a plus. Jamais de ticket d'un autre tarif en remplacement.
+- Index utiles, triggers updated_at.
+Pour les évolutions futures, crée un dossier backend/database/migrations/ avec des fichiers numérotés (001_..., 002_...).
+Explique-moi ensuite, pas à pas, comment exécuter le script dans Supabase et comment vérifier que les tables existent.</pre></div>
+    <p class="verify"><b>Vérifier :</b> dans Supabase, <b>SQL Editor → New query</b>, colle le contenu de <code>schema.sql</code>, clique <b>Run</b>. Puis <b>Table Editor</b> : les 6 tables doivent apparaître.</p>
+  </div>
+
+  <div class="phase">
+    <h3><small>Phase 3</small> API, sécurité et connexion</h3>
+    <div class="code prompt long"><div class="code-top"><span>Prompt · Phase 3</span><button class="copy">Copier</button></div><pre class="tpl">Phase 3 : le backend Express et l'authentification.
+- Structure backend/src : config/ (database, logger, countries), controllers/, routes/, middleware/ (auth, validator, errorHandler), services/, utils/. Point d'entrée src/server.js, scripts npm « dev » (nodemon) et « start ».
+- Sécurité : helmet, CORS avec une liste d'origines séparées par des virgules (CORS_ORIGIN), limitation de débit, express-validator sur toutes les entrées, logs avec winston (jamais de mot de passe ni de clé dans les logs).
+- Route GET /api/health qui répond { status: "ok" }.
+- Auth : POST /api/auth/register, POST /api/auth/login, GET et PUT /api/auth/profile, PUT /api/auth/profile/password. JWT signé avec JWT_SECRET, expiration JWT_EXPIRES_IN.
+- backend/.env.example complet et commenté (PORT, NODE_ENV, API_BASE_URL, FRONTEND_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, JWT_SECRET, JWT_EXPIRES_IN, MONEROO_API_KEY, MONEROO_WEBHOOK_SECRET, MONEROO_BASE_URL, CORS_ORIGIN, LOG_LEVEL).
+- Côté frontend : remplace les données d'exemple de connexion et d'inscription par les vrais appels (axios, VITE_API_URL), garde le jeton, protège les pages du gérant.
+Dis-moi exactement quoi mettre dans backend/.env et frontend/.env.development.local (sans jamais me demander de coller mes clés dans la conversation), puis comment lancer les deux serveurs.</pre></div>
+    <p class="verify"><b>Vérifier :</b> crée ton <code>backend/.env</code> à partir de <code>.env.example</code> et remplis-le toi-même. Pour <code>JWT_SECRET</code>, génère une chaîne aléatoire (voir ci-dessous). Ouvre <code>http://localhost:3000/api/health</code> : tu dois voir <code>"status":"ok"</code>. Inscris-toi, déconnecte-toi, reconnecte-toi.</p>
+    <div class="code cmd"><div class="code-top"><span>PowerShell · générer JWT_SECRET</span><button class="copy">Copier</button></div><pre>-join ((48..57) + (65..90) + (97..122) | Get-Random -Count 64 | % {[char]$_})</pre></div>
+    <div class="tip"><b>Tes clés, toi seul</b>Remplis les fichiers <code>.env</code> toi-même dans l'éditeur. Claude n'a pas besoin de voir tes clés pour écrire le code qui les utilise.</div>
+  </div>
+
+  <div class="phase">
+    <h3><small>Phase 4</small> Zones, tarifs et tickets</h3>
+    <div class="code prompt long"><div class="code-top"><span>Prompt · Phase 4</span><button class="copy">Copier</button></div><pre class="tpl">Phase 4 : zones, tarifs et tickets.
+- CRUD des zones (/api/wifi-zones) : chaque requête vérifie que la zone appartient à l'utilisateur connecté (owner_id). Route publique GET /api/wifi-zones/public/:id qui ne renvoie que ce dont la page d'achat a besoin (nom, pays, actif).
+- CRUD des tarifs par zone (/api/pricings/zone/:zoneId), route publique des tarifs actifs. Refuse un montant sous 100 F CFA. Supprimer un tarif déjà vendu ne doit pas casser l'historique (instantané dans payments).
+- Tickets : import CSV (multer + csv-parser) qui accepte les colonnes Username/username, Password/password, Profile/profile, lie chaque ticket au tarif dont le profil correspond, ignore les doublons et renvoie un résumé (importés, doublons, erreurs). Liste paginée avec filtre par statut, statistiques par zone, alerte quand il reste moins de 10 tickets libres pour un tarif. Un ticket vendu ne peut être ni modifié ni supprimé.
+- Ajoute dans la page Tickets un générateur de lot : je choisis un tarif et une quantité, il produit des identifiants et mots de passe aléatoires lisibles (sans 0/O ni 1/l), puis me donne (a) le fichier CSV à importer et (b) le script RouterOS « /ip hotspot user add » à coller dans le terminal du routeur.
+- Branche les pages Zones, Tarifs et Tickets du frontend sur ces routes.</pre></div>
+    <p class="verify"><b>Vérifier :</b> crée une zone, deux tarifs (ex. 200 F / 1 h et 500 F / 24 h), génère 20 tickets par tarif, importe le CSV. Le compteur de tickets libres doit afficher 20 par tarif. Importe le même fichier une deuxième fois : il doit annoncer 40 doublons et rien de plus.</p>
+  </div>
+
+  <div class="phase">
+    <h3><small>Phase 5</small> Paiement Mobile Money</h3>
+    <p>La phase la plus importante. Lis le prompt avant de l'envoyer : chaque ligne correspond à un problème réel rencontré en production.</p>
+    <div class="code prompt long"><div class="code-top"><span>Prompt · Phase 5</span><button class="copy">Copier</button></div><pre class="tpl">Phase 5 : le paiement avec Moneroo. Lis la documentation officielle de Moneroo (initialisation de paiement, vérification, webhooks, méthodes disponibles) avant d'écrire le code.
+- backend/src/config/countries.js : pour chaque pays (BJ, CI, TG, SN, ML, BF), le nom, l'indicatif, un exemple de numéro et la liste des codes de méthodes Moneroo. Fonction normalizePhone qui ajoute l'indicatif sans retirer le zéro initial des numéros locaux (Bénin et Côte d'Ivoire ont des numéros à 10 chiffres). Le numéro stocké en base doit être exactement celui envoyé à Moneroo.
+- POST /api/payments/intent (public) : reçoit zoneId, pricingId, téléphone. Relit le montant depuis la base (jamais celui envoyé par le navigateur), vérifie qu'il reste au moins un ticket libre de ce tarif AVANT de faire payer, crée le paiement Moneroo avec les méthodes du pays de la zone, une return_url vers la page de retour du frontend, et des métadonnées (zone, tarif, paiement). Enregistre le paiement en pending avec l'instantané du tarif.
+- En mode test (clé commençant par « test_ »), ajoute la passerelle de démonstration Moneroo aux méthodes.
+- POST /api/payments/moneroo/webhook : vérifie la signature HMAC-SHA256 avec MONEROO_WEBHOOK_SECRET sur le corps BRUT de la requête (express.raw sur cette route uniquement, pas sur un JSON re-sérialisé). Rejette toute signature invalide. Idempotence sur événement + id. Sur succès : re-vérifie le statut auprès de l'API Moneroo, enregistre la méthode réellement utilisée, puis appelle assign_ticket_atomic. Le client reçoit un ticket du tarif payé, ou aucun ; jamais un autre tarif. S'il n'y en a plus, marque le paiement pour remboursement et journalise une alerte.
+- GET /api/payments/:id (public, données minimales) : la page de retour l'interroge toutes les 3 secondes pendant 2 minutes, puis affiche le ticket.
+- GET /api/payments/lookup/:phone (public, limité en débit) : retrouve les tickets achetés avec ce numéro, quelle que soit la façon dont le client l'écrit (avec ou sans indicatif).
+- Branche la page d'achat, la page de retour et « Retrouver mon ticket ».
+Explique-moi comment tester en local avec la passerelle de démonstration, sachant que Moneroo ne peut pas appeler mon localhost.</pre></div>
+    <p class="verify"><b>Vérifier :</b> en local, Moneroo ne peut pas joindre ton ordinateur ; Claude te proposera soit un tunnel (ngrok, cloudflared), soit d'attendre la mise en ligne (chapitre 11) pour le test complet. Vérifie au minimum que la page de paiement Moneroo s'ouvre avec les bons opérateurs et le bon montant.</p>
+    <div class="warn"><b>Sans secret de webhook, aucun ticket</b>Si <code>MONEROO_WEBHOOK_SECRET</code> est vide ou faux, tous les webhooks sont rejetés : les clients paient et ne reçoivent rien. C'est la première chose à vérifier si un paiement réussi n'affiche pas de ticket.</div>
+  </div>
+
+  <div class="phase">
+    <h3><small>Phase 6</small> Tableau de bord et comptabilité</h3>
+    <div class="code prompt long"><div class="code-top"><span>Prompt · Phase 6</span><button class="copy">Copier</button></div><pre class="tpl">Phase 6 : tableau de bord et comptabilité.
+- Centralise le taux de commission de l'agrégateur dans backend/src/config/commission.js (je te donnerai le taux réel de mon contrat Moneroo ; mets 2 % par défaut). Arrondi au franc entier, ligne par ligne, jamais sur une somme.
+- GET /api/dashboard/stats : recettes du jour (brut et net), chiffre d'affaires total, tickets vendus, tickets restants, zones actives. Statistiques par zone et par période.
+- Comptabilité (/api/accounting) : ventes par jour (brut, commission, net), tickets vendus par tarif, répartition par opérateur (MTN, Moov, Orange…, avec leurs noms lisibles), historique paginé des paiements avec le ticket attribué, export CSV.
+- Frontend : graphiques recharts, filtres par zone et par période, chiffres alignés, tout lisible sur mobile.
+- Optimise : requêtes en parallèle, chargement page par page, squelettes de chargement.</pre></div>
+    <p class="verify"><b>Vérifier :</b> la somme des lignes « net » doit être égale au total net affiché. Exporte le CSV et ouvre-le dans Excel.</p>
+  </div>
+
+  <div class="phase">
+    <h3><small>Phase 7</small> Générateur de portail captif</h3>
+    <div class="code prompt long"><div class="code-top"><span>Prompt · Phase 7</span><button class="copy">Copier</button></div><pre class="tpl">Phase 7 : la page « Portail captif » du tableau de bord.
+Le gérant choisit sa zone, un style parmi trois, le nom affiché, un pied de page et le numéro WhatsApp ({{WA}} par défaut), voit un aperçu, puis télécharge login.html et redirect.html déjà remplis.
+- Gabarits dans frontend/src/templates/captivePortal.js.
+- login.html : formulaire de connexion MikroTik standard (les variables RouterOS $(link-login-only), $(username), $(error), etc. doivent rester intactes, ainsi que l'usage de md5.js fourni par MikroTik), un gros bouton « Acheter un ticket » vers https://{{DOMAINE}}/acheter/ID_DE_LA_ZONE, un lien « Retrouver mon ticket », et le lien WhatsApp.
+- redirect.html : redirection après connexion.
+- Pas de dépendance externe dans les pages (styles en ligne), elles doivent fonctionner avant que le client ait internet.
+- Fournis aussi, à copier, le bloc walled garden RouterOS qui autorise avant connexion : {{DOMAINE}}, www.{{DOMAINE}}, {{API}}, checkout.moneroo.io, api.moneroo.io, les domaines de la passerelle utilisée par Moneroo (ex. process.fedapay.com, api.fedapay.com), fonts.googleapis.com, fonts.gstatic.com, et wa.me + api.whatsapp.com si un WhatsApp est renseigné. Utilise « /ip hotspot walled-garden ip » (c'est lui qui laisse passer le HTTPS) en plus de « /ip hotspot walled-garden ».
+- Ajoute la marche à suivre sur le routeur, en français simple.
+- L'aperçu dans le navigateur remplace les variables $(...) par des valeurs d'exemple, mais le fichier téléchargé garde les variables brutes.</pre></div>
+    <p class="verify"><b>Vérifier :</b> télécharge les deux fichiers, ouvre <code>login.html</code> avec un éditeur de texte et cherche <code>$(link-login-only)</code> : il doit être présent tel quel.</p>
+  </div>
+
+  <div class="phase">
+    <h3><small>Phase 8 · facultative</small> Ouvrir la plateforme à d'autres gérants</h3>
+    <p>Si tu veux vendre ton système à d'autres gérants plutôt que l'utiliser seul. C'est le modèle de Fô-Zône.</p>
+    <div class="code prompt long"><div class="code-top"><span>Prompt · Phase 8</span><button class="copy">Copier</button></div><pre class="tpl">Phase 8 : mode plateforme multi-gérants.
+- Rôle super_admin (moi) en plus des gérants. Inscription libre des gérants.
+- Commission plateforme de 5 % sur chaque ticket vendu, commission de l'agrégateur INCLUSE dans ces 5 % (c'est mon coût, pas celui du gérant). Exemple : ticket 200 F → 10 F pour {{NOM}}, 190 F pour le gérant. Enregistre platform_fee sur chaque paiement, arrondi au franc par paiement. Affiche clairement ce taux au gérant.
+- Portefeuille du gérant : solde disponible = ventes nettes − retraits. Demande de retrait vers un numéro Mobile Money.
+- Le retrait n'est possible qu'après vérification d'identité du gérant (pièce + selfie), validée par le super-admin.
+- Espace super-admin : liste des gérants (valider, suspendre), demandes de retrait (approuver, marquer payé, refuser avec motif), vue globale des ventes.
+- Partage de compte : un gérant peut inviter un membre d'équipe avec un accès limité à ses zones.
+Toutes ces règles d'argent doivent être vérifiées côté serveur.</pre></div>
+  </div>
+
+  <div class="phase">
+    <h3><small>Phase 9</small> Préparer la mise en ligne</h3>
+    <div class="code prompt"><div class="code-top"><span>Prompt · Phase 9</span><button class="copy">Copier</button></div><pre class="tpl">Phase 9 : préparation de la production.
+- frontend/vercel.json avec une réécriture de toutes les routes vers /index.html (sinon un rafraîchissement sur /acheter/... donne une erreur 404).
+- Vérifie que « npm run build » du frontend passe sans erreur et que le backend démarre avec « npm start ».
+- Le backend doit lire le port fourni par l'hébergeur (process.env.PORT) et faire confiance au proxy (app.set('trust proxy', 1)) pour la limitation de débit.
+- Relis tout le code à la recherche de secrets en dur, de routes sans vérification de propriétaire et de montants acceptés depuis le navigateur. Corrige ce que tu trouves.
+- Mets à jour le README : installation, variables d'environnement, déploiement Vercel + Render, configuration du webhook Moneroo.
+Puis donne-moi les commandes pour créer le dépôt GitHub privé et pousser le code.</pre></div>
+  </div>
+
+  <p class="check-title">Checklist du chapitre</p>
+  <ul class="check" data-ch="c10">
+    <li><label><input type="checkbox" id="k10a"><span class="t">Phase 2 : tables créées dans Supabase</span></label></li>
+    <li><label><input type="checkbox" id="k10b"><span class="t">Phase 3 : inscription et connexion fonctionnent</span></label></li>
+    <li><label><input type="checkbox" id="k10c"><span class="t">Phase 4 : zone, tarifs et tickets importés</span></label></li>
+    <li><label><input type="checkbox" id="k10d"><span class="t">Phase 5 : la page Moneroo s'ouvre avec les bons opérateurs</span></label></li>
+    <li><label><input type="checkbox" id="k10e"><span class="t">Phase 6 : tableau de bord et comptabilité cohérents</span></label></li>
+    <li><label><input type="checkbox" id="k10f"><span class="t">Phase 7 : pages du portail captif téléchargées</span></label></li>
+    <li><label><input type="checkbox" id="k10g"><span class="t">Phase 9 : build OK, code poussé sur GitHub (dépôt privé)</span></label></li>
+  </ul>
+</section>
+
+<!-- 11 -->
+<section class="ch" id="c11" data-title="Mettre en ligne">
+  <div class="ch-head"><div class="ch-num">11</div><div><h2>Mettre en ligne : Render, Vercel et DNS</h2><p class="ch-sub">L'API d'abord, le site ensuite, le webhook pour finir.</p></div></div>
+
+  <h3>1. L'API sur Render</h3>
+  <ol class="steps">
+    <li>Crée un compte sur <a href="https://render.com" target="_blank" rel="noopener">render.com</a> avec GitHub.</li>
+    <li><b>New → Web Service</b>, choisis ton dépôt.</li>
+    <li>Réglages : <b>Root Directory</b> <code>backend</code> · <b>Build Command</b> <code>npm install</code> · <b>Start Command</b> <code>npm start</code> · région Francfort · plan Starter.</li>
+    <li>Dans <b>Environment</b>, ajoute chaque variable de ton <code>backend/.env</code> avec les valeurs de production :</li>
+  </ol>
+  <div class="code cmd"><div class="code-top"><span>Variables Render</span><button class="copy">Copier</button></div><pre class="tpl">NODE_ENV=production
+API_BASE_URL=https://{{API}}
+FRONTEND_URL=https://{{DOMAINE}}
+CORS_ORIGIN=https://{{DOMAINE}},https://www.{{DOMAINE}}
+SUPABASE_URL=            (ta Project URL)
+SUPABASE_SERVICE_ROLE_KEY=   (ta clé service_role)
+JWT_SECRET=              (une NOUVELLE chaîne de 64 caractères)
+JWT_EXPIRES_IN=7d
+MONEROO_API_KEY=         (test_... pour commencer)
+MONEROO_WEBHOOK_SECRET=  (rempli à l'étape 4)
+MONEROO_BASE_URL=https://api.moneroo.io
+LOG_LEVEL=info</pre></div>
+  <ol class="steps" start="5">
+    <li>Lance le déploiement. Quand il est vert, ouvre <code>https://ton-service.onrender.com/api/health</code>.</li>
+    <li><b>Settings → Custom Domains</b> : ajoute <code class="v" data-v="API"></code>. Render t'indique un enregistrement <b>CNAME</b> à créer.</li>
+  </ol>
+
+  <h3>2. Le site sur Vercel</h3>
+  <ol class="steps">
+    <li>Crée un compte sur <a href="https://vercel.com" target="_blank" rel="noopener">vercel.com</a> avec GitHub.</li>
+    <li><b>Add New → Project</b>, importe ton dépôt.</li>
+    <li><b>Root Directory</b> : <code>frontend</code>. Vercel détecte Vite tout seul (build <code>npm run build</code>, sortie <code>dist</code>).</li>
+    <li>Variables d'environnement :</li>
+  </ol>
+  <div class="code cmd"><div class="code-top"><span>Variables Vercel</span><button class="copy">Copier</button></div><pre class="tpl">VITE_API_URL=https://{{API}}/api
+VITE_FRONTEND_URL=https://{{DOMAINE}}</pre></div>
+  <ol class="steps" start="5">
+    <li><b>Deploy</b>. Puis <b>Settings → Domains</b> : ajoute <code class="v" data-v="DOMAINE"></code> et <code>www.</code><span class="v" data-v="DOMAINE"></span>. Vercel affiche les enregistrements DNS à créer.</li>
+  </ol>
+  <div class="note"><b>Variables VITE_</b>Elles sont lues au moment du build. Si tu en modifies une, relance un déploiement pour qu'elle soit prise en compte.</div>
+
+  <h3>3. Les DNS chez ton registraire</h3>
+  <p>Dans la gestion DNS de ton domaine, crée les enregistrements que Vercel et Render t'ont affichés. En général :</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Type</th><th>Nom / Hôte</th><th>Valeur</th><th>Pour</th></tr></thead>
+    <tbody>
+      <tr><td>A</td><td><code>@</code></td><td>l'adresse IP donnée par Vercel</td><td>le site</td></tr>
+      <tr><td>CNAME</td><td><code>www</code></td><td>la cible donnée par Vercel</td><td>le site avec www</td></tr>
+      <tr><td>CNAME</td><td><code>api</code></td><td><code>ton-service.onrender.com</code></td><td>l'API</td></tr>
+    </tbody>
+  </table></div>
+  <p>Supprime les anciens enregistrements A ou CNAME « parking » créés par le registraire sur <code>@</code> et <code>www</code>. La propagation prend de 5 minutes à quelques heures ; le certificat HTTPS est ensuite créé automatiquement.</p>
+
+  <h3>4. Le webhook Moneroo</h3>
+  <ol class="steps">
+    <li>Dans Moneroo, <b>Developers → Webhooks</b>, ajoute l'URL :</li>
+  </ol>
+  <div class="code cmd"><div class="code-top"><span>URL du webhook</span><button class="copy">Copier</button></div><pre class="tpl">https://{{API}}/api/payments/moneroo/webhook</pre></div>
+  <ol class="steps" start="2">
+    <li>Copie le <b>secret de signature</b> affiché et colle-le dans <code>MONEROO_WEBHOOK_SECRET</code> sur Render. Render redéploie automatiquement.</li>
+    <li>Fais un achat de test avec la passerelle de démonstration : le ticket doit s'afficher sur la page de retour en quelques secondes.</li>
+  </ol>
+
+  <h3>5. Passer en production</h3>
+  <ol class="steps">
+    <li>Quand le KYC Moneroo est validé, remplace la clé <code>test_</code> par la clé de production sur Render.</li>
+    <li>Le webhook de production peut avoir son propre secret : vérifie-le.</li>
+    <li>Achète un vrai ticket au tarif le plus bas avec ton propre Mobile Money. Vérifie qu'il apparaît dans la comptabilité avec le bon opérateur.</li>
+  </ol>
+
+  <p class="check-title">Checklist du chapitre</p>
+  <ul class="check" data-ch="c11">
+    <li><label><input type="checkbox" id="k11a"><span class="t">https://<span data-v="API"></span>/api/health répond « ok »</span></label></li>
+    <li><label><input type="checkbox" id="k11b"><span class="t">https://<span data-v="DOMAINE"></span> affiche mon site avec le cadenas HTTPS</span></label></li>
+    <li><label><input type="checkbox" id="k11c"><span class="t">Webhook Moneroo configuré, achat de test réussi avec ticket affiché</span></label></li>
+    <li><label><input type="checkbox" id="k11d"><span class="t">Clé de production en place, un vrai achat réussi</span></label></li>
+  </ul>
+</section>
+
+<!-- 12 -->
+<section class="ch" id="c12" data-title="Configurer le MikroTik">
+  <div class="ch-head"><div class="ch-num">12</div><div><h2>Configurer le routeur MikroTik</h2><p class="ch-sub">Le hotspot, les profils, les tickets et ton portail.</p></div></div>
+
+  <h3>1. Activer le hotspot</h3>
+  <ol class="steps">
+    <li>Installe <b>Winbox</b> (sur <a href="https://mikrotik.com/download" target="_blank" rel="noopener">mikrotik.com/download</a>) et connecte-toi au routeur.</li>
+    <li>Mets RouterOS à jour : <b>System → Packages → Check For Updates</b>.</li>
+    <li><b>IP → Hotspot → Hotspot Setup</b> : choisis l'interface (le bridge Wi-Fi des clients), garde les plages d'adresses proposées, DNS name par exemple <code>login.wifi</code>. Ne crée pas d'utilisateur à la fin.</li>
+  </ol>
+
+  <h3>2. Les profils (un par tarif)</h3>
+  <p>Le nom du profil doit être <b>exactement</b> celui saisi dans le tarif sur ta plateforme : c'est lui qui relie un ticket à son tarif.</p>
+  <div class="code cmd"><div class="code-top"><span>Terminal RouterOS · exemple</span><button class="copy">Copier</button></div><pre>/ip hotspot user profile
+add name=1h  shared-users=1 rate-limit=2M/5M  session-timeout=1h
+add name=24h shared-users=1 rate-limit=3M/8M  session-timeout=1d
+add name=7j  shared-users=1 rate-limit=3M/8M</pre></div>
+  <div class="note"><b>Durée réelle</b><code>session-timeout</code> limite une session continue. Pour un forfait qui expire au bout d'une durée totale, utilise la colonne <b>limit-uptime</b> des utilisateurs (le générateur de la phase 4 peut l'ajouter) ou le paquet <b>User Manager</b>. Demande à Claude d'adapter le script selon ton choix.</div>
+
+  <h3>3. Créer et importer les tickets</h3>
+  <ol class="steps">
+    <li>Dans ton tableau de bord, page <b>Tickets</b>, générateur de lot : choisis le tarif et la quantité.</li>
+    <li>Copie le script RouterOS et colle-le dans <b>New Terminal</b> de Winbox : les utilisateurs sont créés sur le routeur.</li>
+    <li>Importe le CSV correspondant dans la même page : les mêmes tickets sont maintenant en vente.</li>
+  </ol>
+  <div class="warn"><b>Toujours les deux</b>Un ticket présent sur la plateforme mais absent du routeur sera vendu et refusé à la connexion. Importe toujours le script ET le CSV du même lot.</div>
+
+  <h3>4. Installer ton portail</h3>
+  <ol class="steps">
+    <li>Dans le tableau de bord, page <b>Portail captif</b> : choisis la zone, le style, télécharge <code>login.html</code> et <code>redirect.html</code>.</li>
+    <li>Dans Winbox, <b>Files</b> : ouvre le dossier <code>hotspot</code> (ou <code>flash/hotspot</code>) et glisse-dépose les deux fichiers pour remplacer ceux d'origine. Garde <code>md5.js</code> et le dossier <code>img</code> : sans eux, la connexion casse.</li>
+    <li>Copie le bloc walled garden fourni par la page et colle-le dans le terminal.</li>
+  </ol>
+  <p>Le bloc ressemble à ceci, avec tes domaines :</p>
+  <div class="code cmd long"><div class="code-top"><span>Terminal RouterOS</span><button class="copy">Copier</button></div><pre class="tpl">/ip hotspot walled-garden ip
+add action=accept dst-host={{DOMAINE}} comment="{{NOM}} portail"
+add action=accept dst-host=www.{{DOMAINE}} comment="{{NOM}} portail"
+add action=accept dst-host={{API}} comment="{{NOM}} API"
+add action=accept dst-host=checkout.moneroo.io comment="Moneroo checkout"
+add action=accept dst-host=api.moneroo.io comment="Moneroo API"
+add action=accept dst-host=process.fedapay.com comment="Passerelle"
+add action=accept dst-host=api.fedapay.com comment="Passerelle"
+add action=accept dst-host=fonts.googleapis.com comment="Polices"
+add action=accept dst-host=fonts.gstatic.com comment="Polices"
+add action=accept dst-host=wa.me comment="Assistance WhatsApp"
+add action=accept dst-host=api.whatsapp.com comment="Assistance WhatsApp"
+
+/ip hotspot walled-garden
+add action=allow dst-host={{DOMAINE}}
+add action=allow dst-host=*.{{DOMAINE}}
+add action=allow dst-host=*.moneroo.io
+add action=allow dst-host=*.fedapay.com</pre></div>
+  <div class="tip"><b>Si la page de paiement ne s'ouvre pas</b>Depuis le téléphone connecté au Wi-Fi sans ticket, ouvre la page d'achat et note l'adresse qui reste bloquée. Ajoute ce domaine au walled garden. La passerelle derrière Moneroo peut changer selon le pays et l'opérateur.</div>
+
+  <p class="check-title">Checklist du chapitre</p>
+  <ul class="check" data-ch="c12">
+    <li><label><input type="checkbox" id="k12a"><span class="t">Hotspot actif, profils créés avec les noms exacts des tarifs</span></label></li>
+    <li><label><input type="checkbox" id="k12b"><span class="t">Premier lot de tickets : script sur le routeur ET CSV sur la plateforme</span></label></li>
+    <li><label><input type="checkbox" id="k12c"><span class="t">Portail installé, walled garden collé</span></label></li>
+  </ul>
+</section>
+
+<!-- 13 -->
+<section class="ch" id="c13" data-title="Test final et lancement">
+  <div class="ch-head"><div class="ch-num">13</div><div><h2>Le test complet, puis le lancement</h2><p class="ch-sub">Mets-toi dans la peau d'un client, sur un téléphone qui ne connaît pas ton système.</p></div></div>
+  <ol class="steps">
+    <li>Oublie le réseau Wi-Fi sur ton téléphone, reconnecte-toi : le portail doit s'afficher automatiquement.</li>
+    <li>Touche « Acheter un ticket » : la page d'achat s'ouvre sans ticket ni connexion internet préalable.</li>
+    <li>Choisis le tarif le moins cher, saisis ton numéro, paie.</li>
+    <li>Le ticket s'affiche. Reviens au portail, connecte-toi avec : internet fonctionne.</li>
+    <li>Ferme tout, utilise « Retrouver mon ticket » avec ton numéro : le ticket est retrouvé.</li>
+    <li>Dans le tableau de bord : la vente apparaît, avec le bon opérateur, le stock a baissé de 1.</li>
+  </ol>
+
+  <h3>Avant d'ouvrir au public</h3>
+  <ul class="check" data-ch="c13">
+    <li><label><input type="checkbox" id="k13a"><span class="t">Le parcours complet ci-dessus fonctionne sur deux téléphones d'opérateurs différents</span></label></li>
+    <li><label><input type="checkbox" id="k13b"><span class="t">Au moins 50 tickets libres par tarif</span></label></li>
+    <li><label><input type="checkbox" id="k13c"><span class="t">Aucun fichier <code>.env</code> dans le dépôt GitHub (vérifié sur github.com)</span></label></li>
+    <li><label><input type="checkbox" id="k13d"><span class="t">Une affiche à l'entrée de la zone : nom du Wi-Fi, prix, « payez par Mobile Money »</span></label></li>
+    <li><label><input type="checkbox" id="k13e"><span class="t">Le numéro WhatsApp d'assistance répond</span></label></li>
+  </ul>
+  <div class="done-banner"><h3>Ta zone vend toute seule</h3><p>Ensuite, ton travail se résume à trois gestes : recharger les tickets quand l'alerte de stock apparaît, regarder la comptabilité, et demander à Claude les améliorations que tes clients réclament.</p></div>
+</section>
+
+<!-- 14 -->
+<section class="ch" id="c14" data-title="Dépannage et entretien">
+  <div class="ch-head"><div class="ch-num">14</div><div><h2>Dépannage et entretien</h2><p class="ch-sub">Les pannes réellement rencontrées, et comment travailler avec Claude dans la durée.</p></div></div>
+
+  <details class="faq"><summary>Le client a payé mais aucun ticket ne s'affiche</summary>
+    <p>Dans l'ordre : (1) <code>MONEROO_WEBHOOK_SECRET</code> correct sur Render ? (2) L'URL du webhook dans Moneroo pointe bien vers <code class="v" data-v="API"></code> ? (3) Logs Render : cherche « signature ». (4) Reste-t-il des tickets libres de ce tarif ? Le paiement est alors marqué pour remboursement.</p></details>
+  <details class="faq"><summary>La page Moneroo n'affiche pas mon opérateur</summary>
+    <p>La méthode n'est pas activée dans ton tableau de bord Moneroo, ou la zone n'a pas le bon pays. Vérifie les deux.</p></details>
+  <details class="faq"><summary>« The payment method … is invalid »</summary>
+    <p>Un code de méthode n'est pas accepté par Moneroo. Retire-le de <code>countries.js</code> : un seul code invalide bloque tout le paiement.</p></details>
+  <details class="faq"><summary>Erreur CORS dans la console du navigateur</summary>
+    <p><code>CORS_ORIGIN</code> sur Render doit contenir l'adresse exacte du site, avec https et sans barre finale, et aussi la version www.</p></details>
+  <details class="faq"><summary>Erreur 404 quand on rafraîchit une page du site</summary>
+    <p>Il manque <code>frontend/vercel.json</code> avec la réécriture vers <code>/index.html</code>.</p></details>
+  <details class="faq"><summary>« Colonne inconnue » après une mise à jour</summary>
+    <p>Une migration n'a pas été exécutée dans Supabase. Exécute dans l'ordre les fichiers de <code>backend/database/migrations/</code> qui manquent.</p></details>
+  <details class="faq"><summary>Le ticket est vendu mais refusé sur le portail</summary>
+    <p>Il n'existe pas sur le routeur, ou son profil ne porte pas le même nom. Vérifie dans <b>IP → Hotspot → Users</b>.</p></details>
+  <details class="faq"><summary>Le portail affiche du texte comme $(username)</summary>
+    <p>Tu ouvres le fichier en dehors du routeur. Sur le routeur, ces variables sont remplacées automatiquement. Ne les modifie jamais à la main.</p></details>
+
+  <h3>Travailler avec Claude dans la durée</h3>
+  <ul>
+    <li><b>Une demande = une conversation.</b> Pour une nouvelle fonction, ouvre une nouvelle session : Claude relit <code>CLAUDE.md</code> et repart propre.</li>
+    <li><b>Décris le problème, pas la solution.</b> « Les clients du Togo ne voient que Moov » vaut mieux que « modifie countries.js ».</li>
+    <li><b>Colle les erreurs en entier</b>, avec la page et l'action qui l'ont provoquée.</li>
+    <li><b>Commit avant chaque gros changement.</b> Si ça tourne mal : « annule tout depuis le dernier commit ».</li>
+    <li><b>Demande une relecture</b> avant chaque mise en ligne importante : « relis les changements depuis le dernier déploiement et cherche les bugs liés à l'argent ».</li>
+  </ul>
+  <div class="code prompt"><div class="code-top"><span>Prompt d'entretien · exemple</span><button class="copy">Copier</button></div><pre class="tpl">Un client de {{NOM}} a payé 500 F ce matin vers 9 h avec le numéro 01 XX XX XX XX, Moneroo indique « success », mais il n'a pas reçu de ticket. Explique-moi comment retrouver ce paiement, pourquoi le ticket n'a pas été attribué, et corrige la cause. Ne touche à aucun autre paiement.</pre></div>
+
+  <h3>Mettre à jour la plateforme</h3>
+  <ol class="steps">
+    <li>Demande la modification à Claude, teste en local.</li>
+    <li>Valide ; Claude fait le commit et le <code>git push</code>.</li>
+    <li>Vercel et Render redéploient automatiquement à chaque push sur la branche principale.</li>
+    <li>Si la modification ajoute une migration SQL, exécute-la dans Supabase <b>avant</b> le push.</li>
+  </ol>
+
+  <h3>Sécurité : la liste à garder sous la main</h3>
+  <ul>
+    <li>Le dépôt GitHub est <b>privé</b>.</li>
+    <li>La clé <code>service_role</code>, le <code>JWT_SECRET</code> et les clés Moneroo ne vivent que dans <code>.env</code> (local) et dans Render.</li>
+    <li>Si une clé a fuité (capture d'écran, message, commit) : régénère-la immédiatement chez le fournisseur et remplace-la sur Render.</li>
+    <li>Le montant facturé est toujours relu depuis la base, la signature du webhook toujours vérifiée.</li>
+    <li>Active la double authentification sur GitHub, Vercel, Render, Supabase, Moneroo et ton registraire.</li>
+  </ul>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+  var DEFAULTS={NOM:"Fô-Zône",DOMAINE:"fozone.org",DOSSIER:"fozone",PAYS:"Bénin",C1:"#126B57",C2:"#E3A23B",WA:"+229 01 00 00 00 00",STYLE:"moderne, sobre, rassurant, lisible en plein soleil"};
+  var KEY="wz-ebook-v1";
+  var store={};
+  try{store=JSON.parse(localStorage.getItem(KEY)||"{}")||{}}catch(e){store={}}
+  var vals=Object.assign({},DEFAULTS,store.vals||{});
+  var checks=store.checks||{};
+  function save(){try{localStorage.setItem(KEY,JSON.stringify({vals:vals,checks:checks}))}catch(e){}}
+  function v(k){
+    if(k==="API") return "api."+(vals.DOMAINE||"ton-domaine.com");
+    var x=(vals[k]||"").trim(); return x||DEFAULTS[k];
+  }
+
+  // Templates
+  var tpls=[].slice.call(document.querySelectorAll("pre.tpl"));
+  tpls.forEach(function(p){p.dataset.src=p.textContent});
+  function render(){
+    tpls.forEach(function(p){p.textContent=p.dataset.src.replace(/\{\{(\w+)\}\}/g,function(_,k){return v(k)})});
+    document.querySelectorAll("[data-v]").forEach(function(el){el.textContent=v(el.dataset.v)});
+    var c1=document.getElementById("sw1"),c2=document.getElementById("sw2");
+    if(c1)c1.style.background=v("C1"); if(c2)c2.style.background=v("C2");
+  }
+
+  // Form
+  document.querySelectorAll("[data-key]").forEach(function(inp){
+    var k=inp.dataset.key; inp.value=vals[k];
+    inp.addEventListener("input",function(){
+      vals[k]=inp.value; syncPickers(); render(); save();
+      document.getElementById("savedMsg").textContent="Fiche enregistrée dans ce navigateur. Les prompts sont à jour.";
+    });
+  });
+  function hexOk(x){return /^#[0-9a-fA-F]{6}$/.test(x)}
+  function syncPickers(){
+    [["f-c1p","C1"],["f-c2p","C2"]].forEach(function(a){var p=document.getElementById(a[0]);if(hexOk(vals[a[1]]))p.value=vals[a[1]]});
+  }
+  [["f-c1p","f-c1","C1"],["f-c2p","f-c2","C2"]].forEach(function(a){
+    document.getElementById(a[0]).addEventListener("input",function(e){
+      vals[a[2]]=e.target.value.toUpperCase(); document.getElementById(a[1]).value=vals[a[2]]; render(); save();
+    });
+  });
+  syncPickers(); render();
+
+  // Copy
+  document.querySelectorAll(".copy").forEach(function(b){
+    b.addEventListener("click",function(){
+      var pre=b.closest(".code").querySelector("pre"), t=pre.textContent;
+      function ok(){b.textContent="Copié";b.classList.add("done");setTimeout(function(){b.textContent="Copier";b.classList.remove("done")},1600)}
+      function fallback(){var r=document.createRange();r.selectNodeContents(pre);var s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent="Sélectionné : Ctrl+C"}
+      try{navigator.clipboard.writeText(t).then(ok,fallback)}catch(e){fallback()}
+    });
+  });
+
+  // TOC + progress
+  var secs=[].slice.call(document.querySelectorAll("section.ch"));
+  var toc=document.getElementById("tocList"), jump=document.getElementById("jump");
+  secs.forEach(function(s,i){
+    var li=document.createElement("li"), a=document.createElement("a");
+    a.href="#"+s.id; a.dataset.id=s.id;
+    a.innerHTML='<span class="n">'+String(i).padStart(2,"0")+'</span><span></span><span class="ok"></span>';
+    a.children[1].textContent=s.dataset.title;
+    li.appendChild(a); toc.appendChild(li);
+    var o=document.createElement("option"); o.value=s.id; o.textContent=String(i).padStart(2,"0")+" · "+s.dataset.title; jump.appendChild(o);
+  });
+  jump.addEventListener("change",function(){var t=document.getElementById(jump.value);if(t)t.scrollIntoView()});
+
+  var boxes=[].slice.call(document.querySelectorAll(".check input[type=checkbox]"));
+  boxes.forEach(function(b){
+    b.checked=!!checks[b.id];
+    b.addEventListener("change",function(){checks[b.id]=b.checked;save();progress()});
+  });
+  function progress(){
+    var done=boxes.filter(function(b){return b.checked}).length;
+    document.getElementById("progTxt").textContent=done+" / "+boxes.length;
+    document.getElementById("progBar").style.width=(boxes.length?done/boxes.length*100:0)+"%";
+    secs.forEach(function(s){
+      var bs=[].slice.call(s.querySelectorAll(".check input"));
+      var mark=toc.querySelector('a[data-id="'+s.id+'"] .ok');
+      if(!bs.length){mark.style.visibility="hidden";return}
+      mark.classList.toggle("done",bs.every(function(b){return b.checked}));
+    });
+  }
+  progress();
+
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){
+          toc.querySelectorAll("a").forEach(function(a){a.classList.toggle("on",a.dataset.id===e.target.id)});
+          jump.value=e.target.id;
+        }
+      });
+    },{rootMargin:"-30% 0px -60% 0px"});
+    secs.forEach(function(s){io.observe(s)});
+  }
+})();
+</script>
+</body>
+</html>
