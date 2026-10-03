@@ -1154,6 +1154,228 @@ const CHAP_BLOCK = `    $(if chap-id)
     </script>
     $(endif)`;
 
+/* --------------------------------------------------------------- promo ---- */
+
+/**
+ * Message promotionnel affiché à l'arrivée sur le portail.
+ *
+ * Volontairement écrit dans le fichier plutôt que chargé depuis le serveur :
+ * le client n'a aucun accès Internet tant qu'il n'est pas connecté, et un
+ * appel réseau qui échoue ne doit jamais retarder la page de connexion.
+ * Changer le message impose donc de régénérer le fichier.
+ */
+function promoStyles(variant) {
+  const sombre = {
+    voile: 'rgba(4, 7, 6, 0.72)',
+    fond: 'linear-gradient(180deg, rgba(23, 32, 27, 0.98), rgba(13, 19, 16, 0.98))',
+    bord: 'rgba(255, 255, 255, 0.10)',
+    texte: '#E9F1EB',
+    doux: '#8B9A91',
+    accent: '#A3E635',
+    encre: '#0A1005',
+    rayon: '20px',
+  };
+
+  const palettes = {
+    sombre,
+    clair: {
+      voile: 'rgba(20, 32, 26, 0.45)',
+      fond: '#FFFFFF',
+      bord: '#E3E6E1',
+      texte: '#14201A',
+      doux: '#5E6B63',
+      accent: '#A3E635',
+      encre: '#0A1005',
+      rayon: '20px',
+    },
+    minimal: {
+      voile: 'rgba(0, 0, 0, 0.45)',
+      fond: '#FFFFFF',
+      bord: '#D8D8D8',
+      texte: '#111111',
+      doux: '#555555',
+      accent: '#A3E635',
+      encre: '#0A1005',
+      rayon: '10px',
+    },
+    verre: {
+      voile: 'rgba(3, 7, 12, 0.6)',
+      fond: 'rgba(23, 32, 44, 0.96)',
+      bord: 'rgba(255, 255, 255, 0.18)',
+      texte: '#FFFFFF',
+      doux: 'rgba(255, 255, 255, 0.72)',
+      accent: '#007BFF',
+      encre: '#FFFFFF',
+      rayon: '22px',
+    },
+    editorial: {
+      voile: 'rgba(0, 0, 0, 0.5)',
+      fond: '#FFFFFF',
+      bord: '#E0E0E0',
+      texte: '#000000',
+      doux: '#666666',
+      accent: '#000000',
+      encre: '#FFFFFF',
+      rayon: '0px',
+    },
+    industriel: {
+      voile: 'rgba(0, 0, 0, 0.62)',
+      fond: '#1E1E1E',
+      bord: '#333333',
+      texte: '#FFFFFF',
+      doux: '#AAAAAA',
+      accent: '#32CD32',
+      encre: '#000000',
+      rayon: '8px',
+    },
+  };
+
+  const c = palettes[variant] || sombre;
+  const rayonBouton = c.rayon === '0px' ? '0px' : '12px';
+
+  return `
+        /* ---- Message promotionnel ---- */
+        .fz-promo {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: ${c.voile};
+        }
+
+        .fz-promo[hidden] { display: none; }
+
+        .fz-promo-card {
+            position: relative;
+            width: 100%;
+            max-width: 360px;
+            background: ${c.fond};
+            border: 1px solid ${c.bord};
+            border-radius: ${c.rayon};
+            padding: 22px 20px 18px;
+            color: ${c.texte};
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+            animation: fzPromoIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        @keyframes fzPromoIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.98); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .fz-promo-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: ${c.accent};
+            color: ${c.encre};
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .fz-promo-title {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.35;
+            margin-bottom: 8px;
+        }
+
+        .fz-promo-text {
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: ${c.doux};
+        }
+
+        .fz-promo-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: transparent;
+            color: ${c.doux};
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+            border-radius: 50%;
+            font-family: inherit;
+        }
+
+        .fz-promo-ok {
+            width: 100%;
+            margin-top: 16px;
+            padding: 12px;
+            border: none;
+            border-radius: ${rayonBouton};
+            background: ${c.accent};
+            color: ${c.encre};
+            font-size: 14px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .fz-promo-card { animation: none; }
+        }`;
+}
+
+/**
+ * Bloc HTML du message, vide si le promoteur n'en a pas saisi.
+ * Le texte est échappé : une apostrophe ou un chevron ne doit pas casser la
+ * page de connexion.
+ */
+function promoBlock({ promoTitle = '', promoMessage = '' }) {
+  if (!promoMessage || !promoMessage.trim()) return '';
+
+  const texte = escapeHtml(promoMessage.trim()).replace(/\n/g, '<br />');
+  const titre =
+    promoTitle && promoTitle.trim()
+      ? `
+            <p class="fz-promo-title">${escapeHtml(promoTitle.trim())}</p>`
+      : '';
+
+  return `
+    <div class="fz-promo" id="fzPromo" hidden>
+        <div class="fz-promo-card" role="dialog" aria-modal="true" aria-label="Message">
+            <button type="button" class="fz-promo-close" id="fzPromoClose" aria-label="Fermer">&times;</button>
+            <span class="fz-promo-tag">Offre</span>${titre}
+            <p class="fz-promo-text">${texte}</p>
+            <button type="button" class="fz-promo-ok" id="fzPromoOk">J'ai compris</button>
+        </div>
+    </div>
+    <script>
+        // Affiche le message a CHAQUE arrivee sur le portail: rien n'est
+        // memorise, le client le revoit a son prochain achat.
+        //
+        // La boite part masquee et c'est le script qui la devoile: si le
+        // JavaScript echoue, le client voit la page de connexion normale
+        // plutot qu'un voile qu'il ne pourrait pas fermer.
+        (function () {
+            var boite = document.getElementById('fzPromo');
+            if (!boite) return;
+
+            function fermer() { boite.hidden = true; }
+
+            boite.hidden = false;
+
+            document.getElementById('fzPromoClose').onclick = fermer;
+            document.getElementById('fzPromoOk').onclick = fermer;
+            boite.onclick = function (e) { if (e.target === boite) fermer(); };
+            document.onkeydown = function (e) { if (e.key === 'Escape') fermer(); };
+        })();
+    </script>`;
+}
+
 /* ------------------------------------------------------------------- login */
 
 /**
@@ -1178,10 +1400,14 @@ function buildFozoneLogin({
   displayName = 'Wi-Fi Zone',
   footerText = '',
   whatsapp = '',
+  promoTitle = '',
+  promoMessage = '',
   buyUrl,
   recoveryUrl,
 }) {
-  const style = STYLES[variant] || STYLES.sombre;
+  const promo = promoBlock({ promoTitle, promoMessage });
+  // Pas de message, pas de feuille de style morte dans le fichier livre
+  const style = (STYLES[variant] || STYLES.sombre) + (promo ? promoStyles(variant) : '');
   const themeColor = THEME_COLOR[variant] || THEME_COLOR.sombre;
   const phone = normalizePhone(whatsapp);
 
@@ -1209,7 +1435,7 @@ function buildFozoneLogin({
     <style>${style}
     </style>
 </head>
-<body>
+<body>${promo}
     $(if chap-id)
     <form name="sendin" action="$(link-login-only)" method="post" style="display:none">
         <input type="hidden" name="username" />
@@ -1275,10 +1501,13 @@ function buildVerreLogin({
   displayName = 'Wi-Fi Zone',
   footerText = '',
   whatsapp = '',
+  promoTitle = '',
+  promoMessage = '',
   buyUrl,
   recoveryUrl,
 }) {
   const phone = normalizePhone(whatsapp);
+  const promo = promoBlock({ promoTitle, promoMessage });
 
   return `<!doctype html>
 <html lang="fr">
@@ -1289,10 +1518,10 @@ function buildVerreLogin({
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="${THEME_COLOR.verre}" />
     <title>Internet hotspot - Log in</title>
-    <style>${STYLES.verre}
+    <style>${STYLES.verre}${promo ? promoStyles('verre') : ''}
     </style>
 </head>
-<body>
+<body>${promo}
 ${CHAP_BLOCK}
 
     <div class="login-card">
@@ -1357,10 +1586,13 @@ function buildEditorialLogin({
   displayName = 'Wi-Fi Zone',
   footerText = '',
   whatsapp = '',
+  promoTitle = '',
+  promoMessage = '',
   buyUrl,
   recoveryUrl,
 }) {
   const phone = normalizePhone(whatsapp);
+  const promo = promoBlock({ promoTitle, promoMessage });
 
   return `<!doctype html>
 <html lang="fr">
@@ -1371,10 +1603,10 @@ function buildEditorialLogin({
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="${THEME_COLOR.editorial}" />
     <title>Internet hotspot - Log in</title>
-    <style>${STYLES.editorial}
+    <style>${STYLES.editorial}${promo ? promoStyles('editorial') : ''}
     </style>
 </head>
-<body>
+<body>${promo}
 ${CHAP_BLOCK}
 
     <div class="minimal-card">
@@ -1435,10 +1667,13 @@ function buildIndustrielLogin({
   displayName = 'Wi-Fi Zone',
   footerText = '',
   whatsapp = '',
+  promoTitle = '',
+  promoMessage = '',
   buyUrl,
   recoveryUrl,
 }) {
   const phone = normalizePhone(whatsapp);
+  const promo = promoBlock({ promoTitle, promoMessage });
 
   return `<!doctype html>
 <html lang="fr">
@@ -1449,10 +1684,10 @@ function buildIndustrielLogin({
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="${THEME_COLOR.industriel}" />
     <title>Internet hotspot - Log in</title>
-    <style>${STYLES.industriel}
+    <style>${STYLES.industriel}${promo ? promoStyles('industriel') : ''}
     </style>
 </head>
-<body>
+<body>${promo}
 ${CHAP_BLOCK}
 
     <div class="dark-card">
@@ -1713,5 +1948,8 @@ export function toPreviewHtml(html) {
       .replace(/src="img\/user\.svg"/g, `src="${PREVIEW_USER_ICON}"`)
       .replace(/src="img\/password\.svg"/g, `src="${PREVIEW_LOCK_ICON}"`)
       .replace(/<meta http-equiv="refresh"[^>]*>/g, '')
+      // Apercu: le message promo s'affiche sans attendre, et sans memoriser
+      // sa fermeture (sinon il disparaitrait des le premier apercu).
+      .replace(/<div class="fz-promo" id="fzPromo" hidden>/, '<div class="fz-promo" id="fzPromo">')
   );
 }

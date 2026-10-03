@@ -84,6 +84,9 @@ export default function CaptivePortal() {
   const [displayName, setDisplayName] = useState('');
   const [footerText, setFooterText] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  // Message promotionnel affiche a l'arrivee sur le portail
+  const [promoTitle, setPromoTitle] = useState('');
+  const [promoMessage, setPromoMessage] = useState('');
   const [copied, setCopied] = useState('');
   const [showPreview, setShowPreview] = useState(true);
 
@@ -121,9 +124,18 @@ export default function CaptivePortal() {
   const loginHtml = useMemo(
     () =>
       zone
-        ? buildLoginHtml({ variant, displayName, footerText, whatsapp, buyUrl, recoveryUrl })
+        ? buildLoginHtml({
+            variant,
+            displayName,
+            footerText,
+            whatsapp,
+            promoTitle,
+            promoMessage,
+            buyUrl,
+            recoveryUrl,
+          })
         : '',
-    [zone, variant, displayName, footerText, whatsapp, buyUrl, recoveryUrl]
+    [zone, variant, displayName, footerText, whatsapp, promoTitle, promoMessage, buyUrl, recoveryUrl]
   );
 
   const redirectHtml = useMemo(() => buildRedirectHtml({ variant }), [variant]);
@@ -339,6 +351,37 @@ export default function CaptivePortal() {
                     placeholder="Votre nom commercial"
                     className={field}
                   />
+                </div>
+
+                {/* Message promotionnel: ecrit dans le fichier, donc visible
+                    meme sans Internet. Le modifier impose de retelecharger. */}
+                <div className="sm:col-span-2">
+                  <label htmlFor="promo-title" className={label}>
+                    Message d'accueil (optionnel)
+                  </label>
+                  <input
+                    id="promo-title"
+                    type="text"
+                    value={promoTitle}
+                    onChange={(e) => setPromoTitle(e.target.value)}
+                    placeholder="Titre : Offre bonus"
+                    className={field}
+                    maxLength={80}
+                  />
+                  <textarea
+                    id="promo-message"
+                    value={promoMessage}
+                    onChange={(e) => setPromoMessage(e.target.value)}
+                    placeholder="Pour tout achat de 3 jours ou plus, recevez un ticket bonus. Écrivez-nous sur WhatsApp après votre achat."
+                    rows={3}
+                    maxLength={400}
+                    className={`${field} h-auto py-3 mt-2.5 resize-y`}
+                  />
+                  <p className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+                    {promoMessage
+                      ? `${promoMessage.length}/400 — s'affiche à chaque arrivée sur le portail, le client ferme et continue`
+                      : 'Laissez vide pour ne rien afficher'}
+                  </p>
                 </div>
               </div>
 
