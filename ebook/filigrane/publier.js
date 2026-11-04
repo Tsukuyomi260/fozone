@@ -35,6 +35,9 @@
  * Autres commandes :
  *   --lister                 les licences, de la plus recente a la plus ancienne
  *   --appareils-de <ref>     les appareils enregistres pour un exemplaire
+ *   --regenerer <ref>        remet l'exemplaire a jour depuis le guide actuel,
+ *                            meme lien, meme mot de passe, memes appareils
+ *   --regenerer              idem pour tous les exemplaires non revoques
  *   --liberer <ref>          rend toutes les places : l'acheteur repart a zero
  *   --oublier-mot-de-passe <ref>   efface le mot de passe, il en rechoisira un
  *   --revoquer <reference>   coupe l'acces d'un exemplaire
@@ -51,6 +54,7 @@ const {
   RACINE,
   lireArguments,
   nomDeFichier,
+  aujourdhui,
   lireAcheteur,
   fabriquerExemplaire,
   etiquetteAcheteur,
@@ -242,6 +246,74 @@ async function appareilsDe(supabase, reference) {
   }
 }
 
+/**
+ * Refabrique un exemplaire depuis le guide actuel et remplace le fichier a
+ * l'identique de son chemin. Le lien, le mot de passe et les appareils de
+ * l'acheteur ne bougent pas : il voit la nouvelle version a sa prochaine
+ * ouverture, sans avoir rien a faire.
+ */
+async function regenerer(supabase, args, licence) {
+  const acheteur = {
+    prenom: licence.prenom || '',
+    nom: licence.nom || '',
+    telephone: licence.telephone || '',
+    reference: licence.reference || '',
+    date: args.date || aujourdhui()
+  };
+
+  const { html } = fabriquerExemplaire(args, acheteur);
+  const [bucket, ...reste] = String(licence.chemin_storage).split('/');
+  const chemin = reste.join('/');
+
+  const envoi = await supabase.storage.from(bucket).upload(chemin, Buffer.from(html, 'utf8'), {
+    contentType: 'text/html; charset=utf-8',
+    upsert: true
+  });
+
+  if (envoi.error) {
+    console.error('  ' + (licence.reference || licence.id) + ' : echec, ' + envoi.error.message);
+    return false;
+  }
+
+  console.log('  ' + String(licence.reference || licence.id).padEnd(12) +
+    [acheteur.prenom, acheteur.nom].filter(Boolean).join(' ').slice(0, 28).padEnd(30) +
+    (Buffer.byteLength(html, 'utf8') / 1024).toFixed(1) + ' Ko');
+  return true;
+}
+
+const CHAMPS_REGENERATION = 'id, reference, prenom, nom, telephone, chemin_storage';
+
+async function regenererUn(supabase, args, reference) {
+  const licence = await trouverLicence(supabase, reference, CHAMPS_REGENERATION);
+  console.log('Regeneration depuis le guide actuel :');
+  const ok = await regenerer(supabase, args, licence);
+  console.log(ok ? '\nLien, mot de passe et appareils inchanges.' : '\nRien n\'a ete remplace.');
+}
+
+async function regenererTout(supabase, args) {
+  const { data, error } = await supabase
+    .from('ebook_licences')
+    .select(CHAMPS_REGENERATION)
+    .eq('revoquee', false)
+    .order('cree_le', { ascending: true });
+
+  if (error) {
+    console.error('Lecture impossible : ' + error.message);
+    process.exit(1);
+  }
+  if (!data.length) {
+    console.log('Aucune licence a regenerer.');
+    return;
+  }
+
+  console.log('Regeneration de ' + data.length + ' exemplaire(s) depuis le guide actuel :');
+  let faits = 0;
+  for (const licence of data) {
+    if (await regenerer(supabase, args, licence)) faits += 1;
+  }
+  console.log('\n' + faits + ' / ' + data.length + ' remplaces. Liens, mots de passe et appareils inchanges.');
+}
+
 async function liberer(supabase, reference) {
   const licence = await trouverLicence(supabase, reference);
 
@@ -401,6 +473,8 @@ async function main() {
 
   if (args.lister) return lister(supabase);
   if (args['appareils-de']) return appareilsDe(supabase, String(args['appareils-de']));
+  if (args.regenerer === true) return regenererTout(supabase, args);
+  if (args.regenerer) return regenererUn(supabase, args, String(args.regenerer));
   if (args.liberer) return liberer(supabase, String(args.liberer));
   if (args['oublier-mot-de-passe']) return oublierMotDePasse(supabase, String(args['oublier-mot-de-passe']));
   if (args.revoquer) return revoquer(supabase, String(args.revoquer), args.motif);

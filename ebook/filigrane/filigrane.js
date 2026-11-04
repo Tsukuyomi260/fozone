@@ -295,7 +295,50 @@ function appliquerFiligrane(html, acheteur, options) {
   // 4. Bloc de clôture avant la fin du contenu.
   sortie = sortie.replace('</main>', colophon(acheteur, marque) + '</main>');
 
+  // 5. Le bandeau d'accueil salue l'acheteur par son prénom.
+  sortie = sortie.replace(
+    '<span id="accueilNom">toi</span>',
+    '<span id="accueilNom">' + echapperHtml(acheteur.prenom || acheteur.nom) + '</span>'
+  );
+
+  // 6. La carte d'aide de la barre latérale pointe sur le support de l'éditeur.
+  // replace('') insérerait le bloc en tête de fichier : on ne touche à rien
+  // si la carte n'est pas trouvée.
+  const origine = carteAideOrigine(sortie);
+  if (origine) sortie = sortie.replace(origine, carteAide(marque));
+
   return sortie;
+}
+
+/** La carte d'aide telle qu'elle est dans le guide, pour la remplacer en bloc. */
+function carteAideOrigine(html) {
+  const debut = html.indexOf('<div class="aide" id="aideCarte">');
+  if (debut === -1) return '';
+
+  const fin = html.indexOf('</div>', debut);
+  return fin === -1 ? '' : html.slice(debut, fin + '</div>'.length);
+}
+
+/** Sans coordonnées connues, on garde la carte d'origine. */
+function carteAide(marque) {
+  const lien = lienWhatsapp(marque.whatsapp);
+  if (!lien) return carteAideOrigineDefaut();
+
+  return '<div class="aide" id="aideCarte">' +
+    '<b>Besoin d\'aide ?</b>' +
+    '<p>Une question sur une étape, un blocage que le chapitre 14 ne couvre pas ? ' +
+    'Écris directement à ' + echapperHtml(marque.contact || marque.nom) + '.</p>' +
+    '<a href="' + echapperHtml(lien) + '">Écrire sur WhatsApp</a>' +
+    '</div>';
+}
+
+function carteAideOrigineDefaut() {
+  return '<div class="aide" id="aideCarte">' +
+    '<b>Bloqué quelque part ?</b>' +
+    '<p>Le chapitre 14 rassemble les pannes réellement rencontrées et la façon ' +
+    'de les décrire à Claude pour qu\'il les corrige.</p>' +
+    '<a href="#c14">Aller au dépannage</a>' +
+    '</div>';
 }
 
 module.exports = { appliquerFiligrane, INTENSITES };
