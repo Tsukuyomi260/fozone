@@ -60,6 +60,7 @@ const Wallet = lazyPage(() => import('./pages/Wallet'));
 const AdminDashboard = lazyPage(() => import('./pages/admin/AdminDashboard'));
 const AdminWithdrawals = lazyPage(() => import('./pages/admin/AdminWithdrawals'));
 const AdminTenants = lazyPage(() => import('./pages/admin/AdminTenants'));
+const AdminGuide = lazyPage(() => import('./pages/admin/AdminGuide'));
 
 function AppRoutes() {
   const location = useLocation();
@@ -124,6 +125,7 @@ function AppRoutes() {
           <Route index element={<AdminDashboard />} />
           <Route path="withdrawals" element={<AdminWithdrawals />} />
           <Route path="tenants" element={<AdminTenants />} />
+          <Route path="guide" element={<AdminGuide />} />
         </Route>
 
         {/* Espace promoteur: le super-admin n'y a pas sa place non plus.

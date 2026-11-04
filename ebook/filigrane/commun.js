@@ -7,7 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { appliquerFiligrane, INTENSITES } = require('./filigrane');
+const { appliquerFiligrane, INTENSITES } = require('../../backend/src/services/filigrane');
 
 const RACINE = path.join(__dirname, '..');
 const FICHIER_MARQUE = path.join(__dirname, 'marque.json');

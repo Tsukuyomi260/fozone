@@ -17,6 +17,7 @@ const accountingRoutes = require('./accounting');
 const walletRoutes = require('./wallet');
 const adminRoutes = require('./admin');
 const teamRoutes = require('./team');
+const ebookAdminRoutes = require('./ebookAdmin');
 
 // Montage des routes
 router.use('/auth', authRoutes);
@@ -29,6 +30,9 @@ router.use('/accounting', accountingRoutes);
 router.use('/wallet', walletRoutes);
 router.use('/admin', adminRoutes);
 router.use('/team', teamRoutes);
+// Generation des acces au guide. Le service du guide lui-meme est
+// monte a part, sur /guide, hors de /api.
+router.use('/ebook', ebookAdminRoutes);
 
 // Route de santé de l'API
 router.get('/health', (req, res) => {

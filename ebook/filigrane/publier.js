@@ -33,6 +33,8 @@
  *   --garder                 garde aussi une copie dans exemplaires/
  *
  * Autres commandes :
+ *   --publier-guide          depose le guide courant comme reference du serveur,
+ *                            a relancer apres chaque modification du guide
  *   --lister                 les licences, de la plus recente a la plus ancienne
  *   --appareils-de <ref>     les appareils enregistres pour un exemplaire
  *   --regenerer <ref>        remet l'exemplaire a jour depuis le guide actuel,
@@ -338,6 +340,41 @@ async function regenererTout(supabase, args) {
   console.log('\n' + faits + ' / ' + data.length + ' remplaces. Liens, mots de passe et appareils inchanges.');
 }
 
+/**
+ * Depose le guide courant dans le bucket, a _master/guide.html.
+ *
+ * C'est cette copie que le serveur marque quand tu generes un acces depuis
+ * l'espace super-admin : il n'a ainsi besoin d'aucun fichier local. A relancer
+ * apres chaque modification du guide.
+ */
+async function publierGuide(supabase, args) {
+  const source = path.resolve(RACINE, args.source || 'index.html');
+  if (!fs.existsSync(source)) {
+    console.error('Guide introuvable : ' + source);
+    process.exit(1);
+  }
+
+  const bucket = args.bucket || BUCKET_DEFAUT;
+  await verifierBucket(supabase, bucket, Boolean(args['creer-bucket']));
+
+  const contenu = fs.readFileSync(source);
+  const envoi = await supabase.storage.from(bucket).upload('_master/guide.html', contenu, {
+    contentType: 'text/html; charset=utf-8',
+    upsert: true
+  });
+
+  if (envoi.error) {
+    console.error('Envoi impossible : ' + envoi.error.message);
+    process.exit(1);
+  }
+
+  console.log('Guide de reference depose : ' + bucket + '/_master/guide.html');
+  console.log('  source : ' + source);
+  console.log('  poids  : ' + (contenu.length / 1024).toFixed(1) + ' Ko');
+  console.log('');
+  console.log("Les acces crees depuis l'espace super-admin utiliseront cette version.");
+}
+
 async function liberer(supabase, reference) {
   const licence = await trouverLicence(supabase, reference);
 
@@ -495,6 +532,7 @@ async function main() {
   chargerEnvironnement();
   const supabase = clientSupabase();
 
+  if (args['publier-guide']) return publierGuide(supabase, args);
   if (args.lister) return lister(supabase);
   if (args['appareils-de']) return appareilsDe(supabase, String(args['appareils-de']));
   if (args.regenerer === true) return regenererTout(supabase, args);
