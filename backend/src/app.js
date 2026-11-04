@@ -16,6 +16,11 @@ const ebookRoutes = require('./routes/ebook');
 
 const app = express();
 
+// Derrière le proxy de Render, l'adresse du client arrive dans
+// X-Forwarded-For. Sans ceci, req.ip vaut celle du proxy : les limiteurs de
+// débit comptent tout le monde ensemble et les IP enregistrées ne valent rien.
+app.set('trust proxy', 1);
+
 // Sécurité
 app.use(helmet());
 

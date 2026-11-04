@@ -17,8 +17,13 @@
  * Le lien rendu pointe sur /guide/<jeton> de ton API, qui verifie le jeton
  * puis sert le fichier. Revoquer un acces coupe ce seul lien.
  *
+ * A sa premiere ouverture, l'acheteur choisit un mot de passe. Son acces se
+ * fixe ensuite sur les appareils depuis lesquels il l'a saisi, deux par
+ * defaut. Le lien seul ne sert donc a rien.
+ *
  * Options :
  *   --jours N                validite en jours, defaut illimitee
+ *   --appareils N            nombre d'appareils autorises, defaut 2
  *   --bucket nom             defaut guides
  *   --base https://...       racine du lien, defaut API_BASE_URL
  *   --intensite visible|discret
@@ -29,6 +34,9 @@
  *
  * Autres commandes :
  *   --lister                 les licences, de la plus recente a la plus ancienne
+ *   --appareils-de <ref>     les appareils enregistres pour un exemplaire
+ *   --liberer <ref>          rend toutes les places : l'acheteur repart a zero
+ *   --oublier-mot-de-passe <ref>   efface le mot de passe, il en rechoisira un
  *   --revoquer <reference>   coupe l'acces d'un exemplaire
  *     --motif "texte"        raison, gardee avec la revocation
  *
@@ -133,10 +141,29 @@ async function verifierBucket(supabase, bucket, creer) {
   console.log('Bucket prive "' + bucket + '" cree.');
 }
 
+/** Retrouve une licence par sa reference, ou sort avec un message. */
+async function trouverLicence(supabase, reference, champs) {
+  const { data, error } = await supabase
+    .from('ebook_licences')
+    .select(champs || 'id, reference, prenom, nom, max_appareils')
+    .eq('reference', reference)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Lecture impossible : ' + error.message);
+    process.exit(1);
+  }
+  if (!data) {
+    console.error('Aucune licence avec la reference ' + reference + '.');
+    process.exit(1);
+  }
+  return data;
+}
+
 async function lister(supabase) {
   const { data, error } = await supabase
     .from('ebook_licences')
-    .select('reference, prenom, nom, telephone, revoquee, expire_le, ouvertures, derniere_ouverture, cree_le')
+    .select('id, reference, prenom, nom, revoquee, expire_le, ouvertures, max_appareils, mot_de_passe_hash, cree_le')
     .order('cree_le', { ascending: false })
     .limit(100);
 
@@ -150,19 +177,108 @@ async function lister(supabase) {
     return;
   }
 
-  console.log(String('REFERENCE').padEnd(12) + String('TITULAIRE').padEnd(26) + String('OUVERT.').padEnd(9) + 'ETAT');
+  const { data: appareils } = await supabase
+    .from('ebook_appareils')
+    .select('licence_id')
+    .eq('libere', false);
+
+  const parLicence = new Map();
+  for (const a of appareils || []) {
+    parLicence.set(a.licence_id, (parLicence.get(a.licence_id) || 0) + 1);
+  }
+
+  console.log(
+    'REFERENCE   ' + String('TITULAIRE').padEnd(26) +
+    String('OUVERT.').padEnd(9) + String('APPAREILS').padEnd(11) + 'ETAT'
+  );
+
   for (const l of data) {
     const expiree = l.expire_le && new Date(l.expire_le) < new Date();
-    const etat = l.revoquee ? 'revoquee' : (expiree ? 'expiree' : 'active');
-    const titulaire = [l.prenom, l.nom].filter(Boolean).join(' ');
+    const etat = l.revoquee ? 'revoquee'
+      : expiree ? 'expiree'
+        : l.mot_de_passe_hash ? 'active' : 'jamais ouverte';
+
     console.log(
       String(l.reference || '-').padEnd(12) +
-      titulaire.slice(0, 25).padEnd(26) +
+      [l.prenom, l.nom].filter(Boolean).join(' ').slice(0, 25).padEnd(26) +
       String(l.ouvertures).padEnd(9) +
+      ((parLicence.get(l.id) || 0) + ' / ' + l.max_appareils).padEnd(11) +
       etat
     );
   }
   console.log('\n' + data.length + ' licence(s).');
+}
+
+async function appareilsDe(supabase, reference) {
+  const licence = await trouverLicence(supabase, reference);
+
+  const { data, error } = await supabase
+    .from('ebook_appareils')
+    .select('etiquette, premiere_vue, derniere_vue, derniere_ip, libere')
+    .eq('licence_id', licence.id)
+    .order('premiere_vue', { ascending: true });
+
+  if (error) {
+    console.error('Lecture impossible : ' + error.message);
+    process.exit(1);
+  }
+
+  const titulaire = [licence.prenom, licence.nom].filter(Boolean).join(' ');
+  console.log(titulaire + ' (' + licence.reference + ') - ' + licence.max_appareils + ' appareils autorises\n');
+
+  if (!data.length) {
+    console.log('Aucun appareil enregistre : le lien n\'a jamais ete ouvert.');
+    return;
+  }
+
+  for (const a of data) {
+    console.log(
+      (a.libere ? '[libere] ' : '[actif]  ') +
+      String(a.etiquette || 'appareil').padEnd(22) +
+      'depuis le ' + String(a.premiere_vue).slice(0, 10) +
+      '   vu le ' + String(a.derniere_vue).slice(0, 10) +
+      (a.derniere_ip ? '   ' + a.derniere_ip : '')
+    );
+  }
+}
+
+async function liberer(supabase, reference) {
+  const licence = await trouverLicence(supabase, reference);
+
+  const { data, error } = await supabase
+    .from('ebook_appareils')
+    .update({ libere: true, libere_le: new Date().toISOString() })
+    .eq('licence_id', licence.id)
+    .eq('libere', false)
+    .select('id');
+
+  if (error) {
+    console.error('Liberation impossible : ' + error.message);
+    process.exit(1);
+  }
+
+  const titulaire = [licence.prenom, licence.nom].filter(Boolean).join(' ');
+  console.log((data ? data.length : 0) + ' place(s) liberee(s) pour ' + titulaire + ' (' + licence.reference + ').');
+  console.log('Il pourra reenregistrer ' + licence.max_appareils + ' appareils avec son mot de passe.');
+}
+
+async function oublierMotDePasse(supabase, reference) {
+  const licence = await trouverLicence(supabase, reference);
+
+  const { error } = await supabase
+    .from('ebook_licences')
+    .update({ mot_de_passe_hash: null, mot_de_passe_defini_le: null })
+    .eq('id', licence.id);
+
+  if (error) {
+    console.error('Remise a zero impossible : ' + error.message);
+    process.exit(1);
+  }
+
+  const titulaire = [licence.prenom, licence.nom].filter(Boolean).join(' ');
+  console.log('Mot de passe efface pour ' + titulaire + ' (' + licence.reference + ').');
+  console.log('A sa prochaine ouverture, il en choisira un nouveau.');
+  console.log('Ses appareils deja enregistres gardent l\'acces : ajoute --liberer pour les couper aussi.');
 }
 
 async function revoquer(supabase, reference, motif) {
@@ -218,6 +334,15 @@ async function publier(args, supabase) {
     process.exit(1);
   }
 
+  let maxAppareils = null;
+  if (args.appareils !== undefined) {
+    maxAppareils = Number(args.appareils);
+    if (!Number.isInteger(maxAppareils) || maxAppareils < 1 || maxAppareils > 10) {
+      console.error('--appareils doit etre un entier entre 1 et 10.');
+      process.exit(1);
+    }
+  }
+
   const jeton = crypto.randomBytes(16).toString('hex');
   const insertion = await supabase
     .from('ebook_licences')
@@ -228,7 +353,8 @@ async function publier(args, supabase) {
       telephone: acheteur.telephone || null,
       jeton,
       chemin_storage: bucket + '/' + chemin,
-      expire_le: expireLe
+      expire_le: expireLe,
+      ...(maxAppareils ? { max_appareils: maxAppareils } : {})
     })
     .select('id')
     .single();
@@ -256,6 +382,7 @@ async function publier(args, supabase) {
   console.log('  licence    : ' + (acheteur.reference || '(aucune)'));
   console.log('  intensite  : ' + intensite);
   console.log('  validite   : ' + (expireLe ? 'jusqu\'au ' + expireLe.slice(0, 10) : 'illimitee'));
+  console.log('  appareils  : ' + (maxAppareils || 2) + ' maximum');
   console.log('');
   console.log('Lien a envoyer :');
   console.log(lien);
@@ -273,6 +400,9 @@ async function main() {
   const supabase = clientSupabase();
 
   if (args.lister) return lister(supabase);
+  if (args['appareils-de']) return appareilsDe(supabase, String(args['appareils-de']));
+  if (args.liberer) return liberer(supabase, String(args.liberer));
+  if (args['oublier-mot-de-passe']) return oublierMotDePasse(supabase, String(args['oublier-mot-de-passe']));
   if (args.revoquer) return revoquer(supabase, String(args.revoquer), args.motif);
 
   return publier(args, supabase);
