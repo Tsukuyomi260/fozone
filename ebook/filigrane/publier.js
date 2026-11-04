@@ -284,7 +284,31 @@ async function regenerer(supabase, args, licence) {
 const CHAMPS_REGENERATION = 'id, reference, prenom, nom, telephone, chemin_storage';
 
 async function regenererUn(supabase, args, reference) {
-  const licence = await trouverLicence(supabase, reference, CHAMPS_REGENERATION);
+  let licence = await trouverLicence(supabase, reference, CHAMPS_REGENERATION);
+
+  // --prenom et --nom corrigent l'identite au passage. Utile quand le bandeau
+  // d'accueil dit « Salut TANO ADOU JEAN YVES » : on veut juste le prenom.
+  const correction = {};
+  if (args.prenom !== undefined) correction.prenom = String(args.prenom);
+  if (args.nom !== undefined) correction.nom = String(args.nom);
+  if (args.tel !== undefined) correction.telephone = String(args.tel);
+
+  if (Object.keys(correction).length) {
+    const { data, error } = await supabase
+      .from('ebook_licences')
+      .update(correction)
+      .eq('id', licence.id)
+      .select(CHAMPS_REGENERATION)
+      .single();
+
+    if (error) {
+      console.error('Correction impossible : ' + error.message);
+      process.exit(1);
+    }
+    licence = data;
+    console.log('Identite corrigee : ' + [licence.prenom, licence.nom].filter(Boolean).join(' '));
+  }
+
   console.log('Regeneration depuis le guide actuel :');
   const ok = await regenerer(supabase, args, licence);
   console.log(ok ? '\nLien, mot de passe et appareils inchanges.' : '\nRien n\'a ete remplace.');
