@@ -12,6 +12,7 @@ const rateLimit = require('express-rate-limit');
 const logger = require('./config/logger');
 const errorHandler = require('./middleware/errorHandler');
 const routes = require('./routes');
+const ebookRoutes = require('./routes/ebook');
 
 const app = express();
 
@@ -69,6 +70,10 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api', routes);
+
+// Guide nominatif : une page, pas une API. Hors de /api, donc hors du
+// limiteur global, avec son propre limiteur dans la route.
+app.use('/guide', ebookRoutes);
 
 // Route racine
 app.get('/', (req, res) => {
