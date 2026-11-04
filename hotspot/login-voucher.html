@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="expires" content="-1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b1020" />
+    <title>Wi-Fi Zone - Connexion</title>
+    <!-- Tout le style est ici: avant connexion, le client n'a pas Internet,
+         aucune police ni feuille externe ne pourrait se charger. -->
+    <style>
+        :root {
+            --bg: #0b1020;
+            --bg-2: #121a33;
+            --card: rgba(255, 255, 255, 0.06);
+            --card-border: rgba(255, 255, 255, 0.12);
+            --text: #eef2ff;
+            --muted: #94a3c4;
+            --accent: #a3e635;
+            --accent-2: #22d3ee;
+            --danger: #fb7185;
+            --radius: 22px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body { height: 100%; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(1200px 600px at 10% -10%, rgba(34, 211, 238, 0.18), transparent 60%),
+                radial-gradient(900px 500px at 110% 110%, rgba(163, 230, 53, 0.16), transparent 60%),
+                linear-gradient(160deg, var(--bg) 0%, var(--bg-2) 100%);
+            background-attachment: fixed;
+            min-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+            overflow-x: hidden;
+        }
+
+        /* Ondes Wi-Fi en fond */
+        .waves {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .waves span {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 220px;
+            height: 220px;
+            margin: -110px 0 0 -110px;
+            border-radius: 50%;
+            border: 1px solid rgba(163, 230, 53, 0.35);
+            opacity: 0;
+            animation: ripple 6s ease-out infinite;
+        }
+
+        .waves span:nth-child(2) { animation-delay: 2s; border-color: rgba(34, 211, 238, 0.35); }
+        .waves span:nth-child(3) { animation-delay: 4s; }
+
+        @keyframes ripple {
+            0% { transform: scale(0.6); opacity: 0.7; }
+            100% { transform: scale(5); opacity: 0; }
+        }
+
+        .card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 400px;
+            padding: 36px 28px 28px;
+            border-radius: var(--radius);
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            -webkit-backdrop-filter: blur(18px);
+            backdrop-filter: blur(18px);
+            animation: rise 0.6s cubic-bezier(.2, .8, .2, 1) both;
+        }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(18px) scale(0.98); }
+            to { opacity: 1; transform: none; }
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 26px;
+        }
+
+        .badge {
+            width: 72px;
+            height: 72px;
+            border-radius: 20px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            box-shadow: 0 12px 30px rgba(163, 230, 53, 0.35);
+            margin-bottom: 16px;
+        }
+
+        .badge svg { width: 38px; height: 38px; }
+
+        .badge .arc { animation: blink 2.4s ease-in-out infinite; }
+        .badge .arc.a2 { animation-delay: .3s; }
+        .badge .arc.a3 { animation-delay: .6s; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .35; }
+        }
+
+        .brand h1 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .brand p {
+            margin-top: 6px;
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .info {
+            font-size: 14px;
+            line-height: 1.5;
+            text-align: center;
+            color: var(--muted);
+            margin-bottom: 18px;
+        }
+
+        .info a { color: var(--accent); font-weight: 600; }
+
+        .info.alert {
+            color: #fff;
+            background: rgba(251, 113, 133, 0.14);
+            border: 1px solid rgba(251, 113, 133, 0.45);
+            border-radius: 14px;
+            padding: 12px 14px;
+            animation: shake .4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: none; }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        .field-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        .field {
+            position: relative;
+            display: flex;
+            align-items: center;
+            border-radius: 16px;
+            background: rgba(0, 0, 0, 0.28);
+            border: 1.5px solid var(--card-border);
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        .field:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(163, 230, 53, 0.18);
+        }
+
+        .field svg {
+            flex: none;
+            width: 22px;
+            height: 22px;
+            margin-left: 16px;
+            color: var(--accent);
+        }
+
+        .field input {
+            width: 100%;
+            min-width: 0;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: var(--text);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: .18em;
+            padding: 18px 16px 18px 12px;
+        }
+
+        .field input::placeholder {
+            color: rgba(148, 163, 196, 0.55);
+            letter-spacing: .08em;
+            font-weight: 500;
+            font-size: 17px;
+        }
+
+        .hint {
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn {
+            margin-top: 22px;
+            width: 100%;
+            border: 0;
+            border-radius: 16px;
+            padding: 17px;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: .02em;
+            color: #0b1020;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            box-shadow: 0 14px 30px rgba(34, 211, 238, 0.25);
+            cursor: pointer;
+            transition: transform .15s, box-shadow .15s, opacity .15s;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 18px 36px rgba(34, 211, 238, 0.32); }
+        .btn:active { transform: translateY(1px); }
+        .btn[disabled] { opacity: .7; cursor: wait; }
+
+        .steps {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 26px;
+            padding-top: 20px;
+            border-top: 1px solid var(--card-border);
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        .step b {
+            display: grid;
+            place-items: center;
+            width: 26px;
+            height: 26px;
+            margin: 0 auto 6px;
+            border-radius: 50%;
+            font-size: 12px;
+            color: var(--accent);
+            border: 1px solid rgba(163, 230, 53, 0.45);
+        }
+
+        .footer {
+            margin-top: 22px;
+            text-align: center;
+            font-size: 11px;
+            color: rgba(148, 163, 196, 0.6);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="waves" aria-hidden="true"><span></span><span></span><span></span></div>
+
+    $(if chap-id)
+    <form name="sendin" action="$(link-login-only)" method="post" style="display:none">
+        <input type="hidden" name="username" />
+        <input type="hidden" name="password" />
+        <input type="hidden" name="dst" value="$(link-orig)" />
+        <input type="hidden" name="popup" value="true" />
+    </form>
+
+    <script src="/md5.js"></script>
+    <script>
+        function doLogin() {
+            document.sendin.username.value = document.login.username.value;
+            document.sendin.password.value = hexMD5('$(chap-id)' + document.login.password.value + '$(chap-challenge)');
+            document.sendin.submit();
+            return false;
+        }
+
+    </script>
+    $(endif)
+
+    <script>
+        // Mode voucher: un seul code, utilise comme identifiant ET mot de passe.
+        function submitVoucher() {
+            var f = document.login;
+            var code = f.username.value.replace(/\s+/g, '');
+            if (!code) {
+                f.username.focus();
+                return false;
+            }
+            f.username.value = code;
+            f.password.value = code;
+            var btn = document.getElementById('connect');
+            btn.disabled = true;
+            btn.value = 'Connexion...';
+            $(if chap-id)return doLogin();$(endif)
+            return true;
+        }
+    </script>
+
+    <main class="card">
+        <form name="login" action="$(link-login-only)" method="post" onSubmit="return submitVoucher()">
+            <input type="hidden" name="dst" value="$(link-orig)" />
+            <input type="hidden" name="popup" value="true" />
+            <input type="hidden" name="password" />
+
+            <div class="brand">
+                <div class="badge" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#0b1020" stroke-width="2.4" stroke-linecap="round">
+                        <path class="arc a3" d="M2 8.8a15 15 0 0 1 20 0" />
+                        <path class="arc a2" d="M5 12.6a10 10 0 0 1 14 0" />
+                        <path class="arc" d="M8.5 16.3a5 5 0 0 1 7 0" />
+                        <circle cx="12" cy="19.6" r="1.3" fill="#0b1020" stroke="none" />
+                    </svg>
+                </div>
+                <!-- Remplacez par le nom de votre zone -->
+                <h1>Wi-Fi Zone</h1>
+                <p>Internet rapide, en un code.</p>
+            </div>
+
+            <p class="info $(if error)alert$(endif)">
+                $(if error == "")Saisissez le code inscrit sur votre ticket. $(if trial == 'yes')<br />Essai gratuit disponible, <a href="$(link-login-only)?dst=$(link-orig-esc)&amp;username=T-$(mac-esc)">cliquez ici</a>.$(endif)
+                $(endif)
+
+                $(if error)$(error)$(endif)
+            </p>
+
+            <label class="field-label" for="voucher">Code du ticket</label>
+            <div class="field">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 0 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z" />
+                    <path d="M14 5v2M14 11v2M14 17v2" />
+                </svg>
+                <input id="voucher" name="username" type="text" value="$(username)" placeholder="Ex. 4821KQ"
+                    autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" autofocus required />
+            </div>
+            <p class="hint">Respectez les majuscules et minuscules du ticket.</p>
+
+            <input id="connect" class="btn" type="submit" value="Se connecter" />
+
+            <div class="steps">
+                <div class="step"><b>1</b>Achetez un ticket</div>
+                <div class="step"><b>2</b>Saisissez le code</div>
+                <div class="step"><b>3</b>Naviguez</div>
+            </div>
+        </form>
+
+        <p class="footer">Powered by MikroTik RouterOS</p>
+    </main>
+</body>
+
+</html>
