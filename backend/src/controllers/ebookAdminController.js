@@ -1,114 +1,22 @@
 /**
  * Generation et suivi des acces au guide, depuis l'espace super-admin.
  *
- * Ce que faisait le terminal (ebook/filigrane/publier.js) se fait ici : on
- * marque un exemplaire au nom de l'acheteur, on le depose dans le bucket
- * prive, on enregistre la licence, et on rend le lien a coller dans WhatsApp.
+ * La fabrication elle-meme vit dans services/licenceGuide.js, partagee avec
+ * le webhook Chariow : marquer, deposer et enregistrer un exemplaire est la
+ * partie delicate, elle ne doit exister qu'une fois.
  *
- * Le guide de reference ne vient pas du disque mais du bucket, a
- * `_master/guide.html` : le serveur n'a donc besoin d'aucun fichier local, ce
- * qui le rend indifferent a la facon dont Render decoupe le depot. La commande
- * `node filigrane/publier.js --publier-guide` y depose la version courante.
+ * Les reponses d'echec portent leur motif dans `error`, comme partout
+ * ailleurs sur la plateforme : c'est ce champ que le frontend affiche.
  */
 
-const crypto = require('crypto');
 const { supabaseAdmin } = require('../config/database');
 const logger = require('../config/logger');
-const { appliquerFiligrane } = require('../services/filigrane');
+const {
+  BUCKET, CHAMPS, PROVENANCES,
+  versReponse, creerAcces, regenererExemplaire
+} = require('../services/licenceGuide');
+const { envoyerLien } = require('../services/envoiGuide');
 const { listePays, verifierTelephone, DEFAUT } = require('../config/paysTelephone');
-
-const BUCKET = 'guides';
-const CHEMIN_MAITRE = '_master/guide.html';
-const PREFIXE_REFERENCE = 'NZ';
-const PROVENANCES = ['chariow', 'whatsapp', 'especes', 'offert', 'autre'];
-
-const CHAMPS =
-  'id, reference, prenom, nom, telephone, pays, montant, devise, provenance, note, ' +
-  'jeton, chemin_storage, revoquee, expire_le, ouvertures, derniere_ouverture, ' +
-  'max_appareils, mot_de_passe_hash, cree_le';
-
-/** Coordonnees de l'editeur, imprimees dans le bloc de cloture. */
-function marque() {
-  return {
-    nom: process.env.EBOOK_EDITEUR_NOM || process.env.EBOOK_SUPPORT_NOM || 'NET ZONE',
-    contact: process.env.EBOOK_EDITEUR_CONTACT || '',
-    whatsapp: process.env.EBOOK_SUPPORT_WHATSAPP || ''
-  };
-}
-
-function racineDuLien() {
-  const base = process.env.EBOOK_LIEN_BASE || process.env.API_BASE_URL || '';
-  return String(base).replace(/\/+$/, '');
-}
-
-function lienDe(jeton) {
-  const racine = racineDuLien();
-  return racine ? racine + '/guide/' + jeton : null;
-}
-
-/** Le guide de reference, tel que depose par --publier-guide. */
-async function lireGuideMaitre() {
-  const { data, error } = await supabaseAdmin.storage.from(BUCKET).download(CHEMIN_MAITRE);
-  if (error || !data) {
-    throw new Error(
-      'Le guide de référence est absent du stockage. Lance « node filigrane/publier.js --publier-guide ».'
-    );
-  }
-  return Buffer.from(await data.arrayBuffer()).toString('utf8');
-}
-
-/** NZ-0007 apres NZ-0006. Les references non numerotees sont ignorees. */
-async function prochaineReference() {
-  const { data, error } = await supabaseAdmin
-    .from('ebook_licences')
-    .select('reference')
-    .like('reference', PREFIXE_REFERENCE + '-%');
-
-  if (error) throw new Error('Références illisibles : ' + error.message);
-
-  let max = 0;
-  for (const ligne of data || []) {
-    const trouve = /^[A-Z]+-(\d+)$/.exec(ligne.reference || '');
-    if (trouve) max = Math.max(max, parseInt(trouve[1], 10));
-  }
-  return PREFIXE_REFERENCE + '-' + String(max + 1).padStart(4, '0');
-}
-
-function nomDeFichier(valeur) {
-  return String(valeur)
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^A-Za-z0-9._-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
-}
-
-/** Ce que l'interface affiche : jamais le jeton brut sans le lien complet. */
-function versReponse(licence, appareils) {
-  return {
-    id: licence.id,
-    reference: licence.reference,
-    prenom: licence.prenom,
-    nom: licence.nom,
-    telephone: licence.telephone,
-    pays: licence.pays,
-    montant: licence.montant,
-    devise: licence.devise,
-    provenance: licence.provenance,
-    note: licence.note,
-    lien: lienDe(licence.jeton),
-    revoquee: licence.revoquee,
-    expire_le: licence.expire_le,
-    ouvertures: licence.ouvertures,
-    derniere_ouverture: licence.derniere_ouverture,
-    max_appareils: licence.max_appareils,
-    appareils: appareils || 0,
-    mot_de_passe_pose: Boolean(licence.mot_de_passe_hash),
-    cree_le: licence.cree_le
-  };
-}
-
-// ---------------------------------------------------------------------------
 
 /** GET /api/ebook/licences */
 async function listerLicences(req, res) {
@@ -119,7 +27,7 @@ async function listerLicences(req, res) {
 
   if (error) {
     logger.error('ebook admin: lecture impossible', { error: error.message });
-    return res.status(500).json({ message: 'Impossible de charger les accès' });
+    return res.status(500).json({ error: 'Impossible de charger les accès' });
   }
 
   const { data: appareils } = await supabaseAdmin
@@ -163,7 +71,7 @@ async function creerLicence(req, res) {
   const nom = String(corps.nom || '').trim();
 
   if (!prenom && !nom) {
-    return res.status(400).json({ message: 'Il faut au moins un prénom ou un nom.' });
+    return res.status(400).json({ error: 'Il faut au moins un prénom ou un nom.' });
   }
 
   const pays = String(corps.pays || DEFAUT).trim().toUpperCase();
@@ -171,90 +79,60 @@ async function creerLicence(req, res) {
 
   if (corps.telephone) {
     const verifie = verifierTelephone(corps.telephone, pays);
-    if (!verifie.ok) return res.status(400).json({ message: verifie.message });
+    if (!verifie.ok) return res.status(400).json({ error: verifie.message });
     telephone = verifie.affichage;
   }
 
   const montant = corps.montant === '' || corps.montant == null ? null : Number(corps.montant);
   if (montant !== null && (!Number.isFinite(montant) || montant < 0)) {
-    return res.status(400).json({ message: 'Le montant doit être un nombre positif.' });
+    return res.status(400).json({ error: 'Le montant doit être un nombre positif.' });
   }
 
   const provenance = corps.provenance ? String(corps.provenance) : null;
   if (provenance && !PROVENANCES.includes(provenance)) {
-    return res.status(400).json({ message: 'Provenance inconnue.' });
+    return res.status(400).json({ error: 'Provenance inconnue.' });
   }
 
   const maxAppareils = corps.max_appareils ? Number(corps.max_appareils) : 2;
   if (!Number.isInteger(maxAppareils) || maxAppareils < 1 || maxAppareils > 10) {
-    return res.status(400).json({ message: "Le nombre d'appareils doit être entre 1 et 10." });
+    return res.status(400).json({ error: "Le nombre d'appareils doit être entre 1 et 10." });
   }
 
-  // La reference se calcule avant le filigrane : elle est imprimee dans le
-  // bandeau, dans chaque pied de chapitre et dans le bloc de cloture.
-  let reference;
-  let html;
+  let licence;
   try {
-    reference = await prochaineReference();
-    html = appliquerFiligrane(
-      await lireGuideMaitre(),
+    licence = await creerAcces(
+      { prenom, nom, telephone, pays, email: String(corps.email || '').trim() || null },
       {
-        prenom,
-        nom,
-        telephone,
-        reference,
-        date: new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date())
-      },
-      { intensite: 'visible', marque: marque() }
+        montant,
+        devise: corps.devise ? String(corps.devise).toUpperCase().slice(0, 3) : 'XOF',
+        provenance,
+        note: corps.note ? String(corps.note).slice(0, 500) : null,
+        max_appareils: maxAppareils
+      }
     );
   } catch (erreur) {
-    logger.error('ebook admin: fabrication impossible', { error: erreur.message });
-    return res.status(500).json({ message: erreur.message });
+    logger.error('ebook admin: creation impossible', { error: erreur.message });
+    return res.status(500).json({ error: erreur.message });
   }
 
-  const chemin = nomDeFichier(reference) + '-' + crypto.randomBytes(16).toString('hex') + '.html';
-  const envoi = await supabaseAdmin.storage.from(BUCKET).upload(chemin, Buffer.from(html, 'utf8'), {
-    contentType: 'text/html; charset=utf-8',
-    upsert: false
-  });
-
-  if (envoi.error) {
-    logger.error('ebook admin: depot impossible', { error: envoi.error.message });
-    return res.status(500).json({ message: "L'exemplaire n'a pas pu être déposé." });
+  // Envoi seulement si demande : une vente saisie a la main part souvent
+  // par WhatsApp, et un second email ferait doublon.
+  let envoye = false;
+  if (corps.envoyer_email && licence.email) {
+    const envoi = await envoyerLien(licence);
+    envoye = envoi.envoye;
+    if (!envoi.envoye) {
+      return res.status(201).json({
+        message: 'Accès créé, mais l\'email n\'est pas parti : ' + envoi.raison,
+        licence
+      });
+    }
   }
-
-  const jeton = crypto.randomBytes(16).toString('hex');
-  const { data: licence, error } = await supabaseAdmin
-    .from('ebook_licences')
-    .insert({
-      reference,
-      prenom: prenom || null,
-      nom: nom || prenom,
-      telephone: telephone || null,
-      pays,
-      montant,
-      devise: corps.devise ? String(corps.devise).toUpperCase().slice(0, 3) : 'XOF',
-      provenance,
-      note: corps.note ? String(corps.note).slice(0, 500) : null,
-      jeton,
-      chemin_storage: BUCKET + '/' + chemin,
-      max_appareils: maxAppareils
-    })
-    .select(CHAMPS)
-    .single();
-
-  if (error) {
-    // On ne laisse pas un fichier orphelin dans le bucket.
-    await supabaseAdmin.storage.from(BUCKET).remove([chemin]);
-    logger.error('ebook admin: licence non enregistree', { error: error.message });
-    return res.status(500).json({ message: "L'accès n'a pas pu être enregistré." });
-  }
-
-  logger.info('ebook admin: acces cree', { reference, par: req.user && req.user.id });
 
   return res.status(201).json({
-    message: 'Accès créé pour ' + [prenom, nom].filter(Boolean).join(' '),
-    licence: versReponse(licence, 0)
+    message: 'Accès créé pour ' + [prenom, nom].filter(Boolean).join(' ') +
+      (envoye ? ', email envoyé' : ''),
+    licence
   });
 }
 
@@ -267,11 +145,11 @@ async function chargerLicence(id, res) {
     .maybeSingle();
 
   if (error) {
-    res.status(500).json({ message: 'Lecture impossible' });
+    res.status(500).json({ error: 'Lecture impossible' });
     return null;
   }
   if (!data) {
-    res.status(404).json({ message: 'Accès introuvable' });
+    res.status(404).json({ error: 'Accès introuvable' });
     return null;
   }
   return data;
@@ -291,7 +169,7 @@ async function revoquerLicence(req, res) {
     })
     .eq('id', licence.id);
 
-  if (error) return res.status(500).json({ message: 'Opération impossible' });
+  if (error) return res.status(500).json({ error: 'Opération impossible' });
 
   return res.json({
     message: licence.revoquee
@@ -312,7 +190,7 @@ async function libererAppareils(req, res) {
     .eq('libere', false)
     .select('id');
 
-  if (error) return res.status(500).json({ message: 'Opération impossible' });
+  if (error) return res.status(500).json({ error: 'Opération impossible' });
 
   const nombre = data ? data.length : 0;
   return res.json({
@@ -332,7 +210,7 @@ async function oublierMotDePasse(req, res) {
     .update({ mot_de_passe_hash: null, mot_de_passe_defini_le: null })
     .eq('id', licence.id);
 
-  if (error) return res.status(500).json({ message: 'Opération impossible' });
+  if (error) return res.status(500).json({ error: 'Opération impossible' });
 
   return res.json({
     message: 'Mot de passe effacé. Il en choisira un nouveau à sa prochaine ouverture. ' +
@@ -345,40 +223,33 @@ async function regenererLicence(req, res) {
   const licence = await chargerLicence(req.params.id, res);
   if (!licence) return undefined;
 
-  let html;
   try {
-    html = appliquerFiligrane(
-      await lireGuideMaitre(),
-      {
-        prenom: licence.prenom || '',
-        nom: licence.nom || '',
-        telephone: licence.telephone || '',
-        reference: licence.reference || '',
-        date: new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date())
-      },
-      { intensite: 'visible', marque: marque() }
-    );
+    await regenererExemplaire(licence);
   } catch (erreur) {
-    return res.status(500).json({ message: erreur.message });
-  }
-
-  const morceaux = String(licence.chemin_storage).split('/');
-  const bucket = morceaux.shift();
-  const chemin = morceaux.join('/');
-
-  const envoi = await supabaseAdmin.storage.from(bucket).upload(chemin, Buffer.from(html, 'utf8'), {
-    contentType: 'text/html; charset=utf-8',
-    upsert: true
-  });
-
-  if (envoi.error) {
-    logger.error('ebook admin: regeneration impossible', { error: envoi.error.message });
-    return res.status(500).json({ message: 'Le fichier n\'a pas pu être remplacé.' });
+    logger.error('ebook admin: regeneration impossible', { error: erreur.message });
+    return res.status(500).json({ error: erreur.message });
   }
 
   return res.json({
     message: licence.reference + ' remis à jour. Lien, mot de passe et appareils inchangés.'
   });
+}
+
+/** POST /api/ebook/licences/:id/renvoyer : renvoie le lien par email. */
+async function renvoyerLien(req, res) {
+  const licence = await chargerLicence(req.params.id, res);
+  if (!licence) return undefined;
+
+  if (!licence.email) {
+    return res.status(400).json({ error: 'Cet accès n\'a pas d\'adresse email.' });
+  }
+
+  const envoi = await envoyerLien(versReponse(licence, 0));
+  if (!envoi.envoye) {
+    return res.status(500).json({ error: "L'email n'est pas parti : " + envoi.raison });
+  }
+
+  return res.json({ message: 'Lien renvoyé à ' + licence.email });
 }
 
 /** GET /api/ebook/licences/:id/appareils */
@@ -392,7 +263,7 @@ async function listerAppareils(req, res) {
     .eq('licence_id', licence.id)
     .order('premiere_vue', { ascending: true });
 
-  if (error) return res.status(500).json({ message: 'Lecture impossible' });
+  if (error) return res.status(500).json({ error: 'Lecture impossible' });
 
   return res.json({ appareils: data || [], max: licence.max_appareils });
 }
@@ -404,5 +275,7 @@ module.exports = {
   libererAppareils,
   oublierMotDePasse,
   regenererLicence,
-  listerAppareils
+  renvoyerLien,
+  listerAppareils,
+  BUCKET
 };

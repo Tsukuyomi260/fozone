@@ -41,6 +41,11 @@ export async function regenererExemplaire(id) {
   return api.post(`/ebook/licences/${id}/regenerer`, {});
 }
 
+/** Renvoie le lien par email a l'acheteur. */
+export async function renvoyerLien(id) {
+  return api.post(`/ebook/licences/${id}/renvoyer`, {});
+}
+
 /** Les appareils enregistrés pour un exemplaire. */
 export async function getAppareils(id) {
   return api.get(`/ebook/licences/${id}/appareils`);

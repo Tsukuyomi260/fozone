@@ -17,6 +17,7 @@ const accountingRoutes = require('./accounting');
 const walletRoutes = require('./wallet');
 const adminRoutes = require('./admin');
 const teamRoutes = require('./team');
+const ebookWebhookRoutes = require('./ebookWebhook');
 const ebookAdminRoutes = require('./ebookAdmin');
 
 // Montage des routes
@@ -32,6 +33,9 @@ router.use('/admin', adminRoutes);
 router.use('/team', teamRoutes);
 // Generation des acces au guide. Le service du guide lui-meme est
 // monte a part, sur /guide, hors de /api.
+// Le webhook Chariow passe en premier : il est public, alors que le
+// routeur d'administration qui suit exige une authentification.
+router.use('/ebook', ebookWebhookRoutes);
 router.use('/ebook', ebookAdminRoutes);
 
 // Route de santé de l'API

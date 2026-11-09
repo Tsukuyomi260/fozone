@@ -2,17 +2,18 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import {
   BookOpen, Copy, Check, MessageCircle, Smartphone,
-  RefreshCw, KeyRound, Unlock, Ban, Plus,
+  RefreshCw, KeyRound, Unlock, Ban, Plus, Mail,
 } from 'lucide-react';
 import {
   getLicences, creerAcces, revoquerAcces, libererAppareils,
-  oublierMotDePasse, regenererExemplaire, getAppareils,
+  oublierMotDePasse, regenererExemplaire, renvoyerLien, getAppareils,
 } from '../../services/guide';
 import { SkeletonHeader, SkeletonTable } from '../../components/Skeleton';
 
 const FORMULAIRE_VIDE = {
-  prenom: '', nom: '', pays: 'BJ', telephone: '',
+  prenom: '', nom: '', pays: 'BJ', telephone: '', email: '',
   montant: '', provenance: 'chariow', note: '', max_appareils: 2,
+  envoyer_email: false,
 };
 
 const CANAUX = {
@@ -251,6 +252,12 @@ export default function AdminGuide() {
               onChange={(e) => setForm({ ...form, telephone: e.target.value })} />
           </div>
           <div>
+            <label className={etiquette} htmlFor="email">Email</label>
+            <input id="email" className={champ} type="email" value={form.email}
+              placeholder="acheteur@exemple.com"
+              onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          </div>
+          <div>
             <label className={etiquette} htmlFor="montant">Montant payé</label>
             <input id="montant" className={champ} type="number" min="0" value={form.montant}
               placeholder="0" onChange={(e) => setForm({ ...form, montant: e.target.value })} />
@@ -277,10 +284,18 @@ export default function AdminGuide() {
           </div>
         </div>
 
-        <button type="submit" disabled={creation}
-          className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-lime-400 hover:bg-lime-300 disabled:opacity-50 text-[#0A1005] text-sm font-semibold transition-colors">
-          {creation ? 'Génération…' : "Générer l'accès"}
-        </button>
+        <div className="flex flex-wrap items-center gap-4">
+          <button type="submit" disabled={creation}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-lime-400 hover:bg-lime-300 disabled:opacity-50 text-[#0A1005] text-sm font-semibold transition-colors">
+            {creation ? 'Génération…' : "Générer l'accès"}
+          </button>
+          <label className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
+            <input type="checkbox" className="w-4 h-4 accent-lime-500" checked={form.envoyer_email}
+              disabled={!form.email}
+              onChange={(e) => setForm({ ...form, envoyer_email: e.target.checked })} />
+            Envoyer le lien par email
+          </label>
+        </div>
       </form>
 
       {/* Le lien qui vient d'être créé */}
@@ -356,7 +371,7 @@ export default function AdminGuide() {
                         <p className="font-medium text-gray-900 dark:text-white">
                           {[l.prenom, l.nom].filter(Boolean).join(' ')}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{l.telephone || '—'}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{l.telephone || l.email || '—'}</p>
                       </td>
                       <td className={`${td} text-gray-900 dark:text-white`}>
                         {l.montant ? `${l.montant.toLocaleString()} ${l.devise}` : '—'}
@@ -402,6 +417,13 @@ export default function AdminGuide() {
                             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400">
                             <KeyRound size={15} strokeWidth={2.2} />
                           </button>
+                          {l.email && (
+                            <button type="button" title={`Renvoyer le lien à ${l.email}`} disabled={occupe}
+                              onClick={() => agir(l, 'mail', renvoyerLien)}
+                              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400">
+                              <Mail size={15} strokeWidth={2.2} />
+                            </button>
+                          )}
                           <button type="button" title="Remettre à jour depuis le guide actuel" disabled={occupe}
                             onClick={() => agir(l, 'regen', regenererExemplaire)}
                             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400">

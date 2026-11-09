@@ -76,9 +76,13 @@ async function apiRequest(endpoint, options = {}) {
       // Les erreurs de validation arrivent avec un 'error' générique en anglais
       // et le vrai motif dans 'message'. Afficher le premier laissait
       // l'utilisateur devant un « Validation failed » sans savoir quoi corriger.
+      // 'message' sert aussi de repli: un controleur qui n'expose que ce
+      // champ laissait l'utilisateur devant « Une erreur est survenue »
+      // alors que le serveur avait repondu precisement.
       const errorMessage =
         (data.error === 'Validation failed' && data.message) ||
         data.error ||
+        data.message ||
         'Une erreur est survenue. Veuillez réessayer';
       
       // Logger les détails techniques uniquement en console (pas affichés à l'utilisateur)

@@ -27,6 +27,7 @@ router.post(
     body('prenom').optional({ checkFalsy: true }).trim().isLength({ max: 120 }),
     body('nom').optional({ checkFalsy: true }).trim().isLength({ max: 120 }),
     body('telephone').optional({ checkFalsy: true }).trim().isLength({ max: 40 }),
+    body('email').optional({ checkFalsy: true }).trim().isEmail().withMessage('Adresse email invalide').isLength({ max: 255 }),
     body('pays').optional({ checkFalsy: true }).trim().isLength({ min: 2, max: 2 }),
     body('montant').optional({ nullable: true }),
     body('provenance').optional({ checkFalsy: true }).trim(),
@@ -40,6 +41,7 @@ router.post(
 router.get('/licences/:id/appareils', idValidation, validate, ebookAdmin.listerAppareils);
 router.post('/licences/:id/liberer', idValidation, validate, ebookAdmin.libererAppareils);
 router.post('/licences/:id/regenerer', idValidation, validate, ebookAdmin.regenererLicence);
+router.post('/licences/:id/renvoyer', idValidation, validate, ebookAdmin.renvoyerLien);
 router.post('/licences/:id/oublier-mot-de-passe', idValidation, validate, ebookAdmin.oublierMotDePasse);
 
 router.post(
